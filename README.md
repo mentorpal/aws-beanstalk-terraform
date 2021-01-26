@@ -1,2 +1,2 @@
 # mentorpal.site-beanstalk-terraform
-terraform module and template creates infrastructure for a mentorpal instance on AWS Elastic Beanstalk
+terraform module and a template each site can copy as basis for its own mentorpal-on-beanstalk infrastructure
