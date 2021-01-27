@@ -1,4 +1,5 @@
 .terraform
+.terraform.lock.hcl
 *.tfstate*
 *__tfstate*
 *secret.*.tfvars
@@ -7,3 +8,4 @@
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
 backend.tf
+.env

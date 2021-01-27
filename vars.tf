@@ -265,6 +265,18 @@ variable "google_client_id" {
   description = "google client id for google auth (https://developers.google.com/identity/one-tap/web/guides/get-google-api-clientid)"
 }
 
+variable "secret_api_key" {
+  type        = string
+  description = "used to permit services to have superuser powers"
+  default     = "set-me"
+}
+
+variable "secret_jwt_key" {
+  type        = string
+  description = "used to encrypt jwt tokens"
+  default     = "set-me"
+}
+
 variable "secret_mongo_uri" {
   type        = string
   description = "fully qualified mongo uri (includes user and password) for connections to a mongodb instance backend (presumably external, e.g. mongodb.com)"

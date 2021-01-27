@@ -14,6 +14,8 @@ module "mentorpal_beanstalk_deployment" {
     eb_env_namespace                = var.eb_env_namespace
     eb_env_stage                    = var.eb_env_stage
     google_client_id                = var.google_client_id
+    secret_api_key                  = var.secret_api_key
+    secret_jwt_key                  = var.secret_jwt_key
     secret_mongo_uri                = var.secret_mongo_uri
     site_domain_name                = var.site_domain_name
 }

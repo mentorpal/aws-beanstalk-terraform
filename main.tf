@@ -116,7 +116,9 @@ module "elastic_beanstalk_environment" {
   env_vars            = merge(
                           var.eb_env_env_vars,
                           {
+                            API_SECRET=var.secret_api_key
                             GOOGLE_CLIENT_ID=var.google_client_id,
+                            JWT_SECRET=var.secret_jwt_key,
                             MONGO_URI=var.secret_mongo_uri
                           }
                         )
@@ -135,7 +137,6 @@ data "aws_iam_policy_document" "minimal_s3_permissions" {
     resources = ["*"]
   }
 }
-
 
 # Find a certificate that is issued
 data "aws_acm_certificate" "issued" {
@@ -160,7 +161,6 @@ resource "aws_route53_record" "site_domain_name" {
     evaluate_target_health = true
   }
 }
-
 
 module "efs" {
   source             = "git::https://github.com/cloudposse/terraform-aws-efs.git?ref=tags/0.26.1"
