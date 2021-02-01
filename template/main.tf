@@ -18,6 +18,7 @@ module "mentorpal_beanstalk_deployment" {
     secret_jwt_key                  = var.secret_jwt_key
     secret_mongo_uri                = var.secret_mongo_uri
     site_domain_name                = var.site_domain_name
+    vpc_cidr_block                  = var.vpc_cidr_block
 }
 
 output "efs_file_system_id" {
