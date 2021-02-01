@@ -61,3 +61,9 @@ variable "site_domain_name" {
   type        = string
   description = "the public domain name for this site, e.g. dev.mentorpal.org"
 }
+
+variable "vpc_cidr_block" {
+  type        = string
+  description = "cidr for the vpc, generally can leave the default unless there is conflict"
+  default     = "172.16.0.0/16"
+ }

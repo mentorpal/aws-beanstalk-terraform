@@ -221,7 +221,7 @@ variable "eb_env_root_volume_type" {
 variable "eb_env_solution_stack_name" {
   type        = string
   description = "Elastic Beanstalk stack, e.g. Docker, Go, Node, Java, IIS. For more info, see https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platforms-supported.html"
-  default     = "64bit Amazon Linux 2018.03 v2.24.0 running Multi-container Docker 19.03.13-ce (Generic)"
+  default     = "64bit Amazon Linux 2018.03 v2.25.0 running Multi-container Docker 19.03.13-ce (Generic)"
 }
 
 variable "eb_env_stage" {
@@ -286,3 +286,9 @@ variable "site_domain_name" {
   type        = string
   description = "the public domain name for this site, e.g. dev.mentorpal.org"
 }
+
+variable "vpc_cidr_block" {
+  type        = string
+  description = "cidr for the vpc, generally can leave the default unless there is conflict"
+  default     = "172.16.0.0/16"
+ }
