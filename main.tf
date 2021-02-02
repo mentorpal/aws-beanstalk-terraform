@@ -42,6 +42,11 @@ module "elastic_beanstalk_application" {
 
 data "aws_elastic_beanstalk_hosted_zone" "current" {}
 
+data "aws_elastic_beanstalk_solution_stack" "multi_docker" {
+  most_recent = true
+  name_regex = "^64bit Amazon Linux (.*) Multi-container Docker (.*)$"
+}
+
 module "elastic_beanstalk_environment" {
   source                     = "git::https://github.com/cloudposse/terraform-aws-elastic-beanstalk-environment.git?ref=tags/0.34.0"
   namespace                  = var.eb_env_namespace
@@ -107,11 +112,9 @@ module "elastic_beanstalk_environment" {
 
   healthcheck_url  = var.eb_env_healthcheck_url
   application_port = var.eb_env_application_port
-
   // https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platforms-supported.html
   // https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platforms-supported.html#platforms-supported.docker
-  solution_stack_name = var.eb_env_solution_stack_name
-
+  solution_stack_name = data.aws_elastic_beanstalk_solution_stack.multi_docker.name
   additional_settings = var.eb_env_additional_settings
   env_vars            = merge(
                           var.eb_env_env_vars,
