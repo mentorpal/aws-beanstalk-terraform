@@ -18,11 +18,6 @@ variable "aws_route53_zone_name" {
   description = "name to find aws route53 zone, e.g. mentorpal.info."
 }
 
-# variable "dns_zone_id" {
-#   type        = string
-#   description = "Route53 parent zone ID. The module will create sub-domain DNS record in the parent zone for the EB environment"
-# }
-
 variable "eb_env_additional_settings" {
   type = list(object({
     namespace = string

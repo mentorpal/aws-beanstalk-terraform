@@ -50,7 +50,7 @@ To configure infrastructure for a new mentorpal site using this module you will 
 
 - (`Developer`) a [GOOGLE_CLIENT_ID](https://developers.google.com/identity/one-tap/web/guides/get-google-api-clientid) for google user authentication
 
-- A domain name and SSL certificate for your mentorpal site. Current terraform assumes this is all in AWS with cert in `AWS Certificate Manager` and DNS in `AWS Route 53`)
+- A domain name and SSL certificate for your mentorpal site. Current terraform assumes this is all in AWS with cert in `AWS Certificate Manager` and DNS in `AWS Route 53`), and you must have an instance of the certificate in the same AWS region where you are deploying the app (you can create certs for the same domain in multiple regions with ACM.)
 
 ## Configuring this template for a New mentorpal Site
 
@@ -89,4 +89,3 @@ Once `AWS Admin` has received and approved the configured terraform.
  ### Why execute the terraform manually rather than in CI?
 
  Really, it would be better to have `terraform` execute in a CI environment based on some specific trigger (e.g. a tag with a `semver` format from `main`.) The reason we don't do this yet is that `github` lacks sufficient tag-permissioning features to securely guarantee that any person with write access to the repo, couldn't trigger an infrastructure update. Github will likely eventually acquire these features (gitlab already has it), so we should revisit periodically.
-
