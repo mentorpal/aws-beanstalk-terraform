@@ -276,6 +276,12 @@ variable "site_domain_name" {
   description = "the public domain name for this site, e.g. dev.mentorpal.org"
 }
 
+variable "static_site_alias" {
+  type          = string
+  description   = "alias for static site that will serve video etc. By default, generates one based on site_domain_name"
+  default       = ""
+}
+
 variable "vpc_cidr_block" {
   type        = string
   description = "cidr for the vpc, generally can leave the default unless there is conflict"

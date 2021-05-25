@@ -56,6 +56,30 @@ module "transcribe_aws" {
     transcribe_namespace    = local.namespace
 }
 
+locals {
+  cdn_alias = (
+    var.static_site_alias != "" 
+    ? var.static_site_alias
+    : length(split(".", var.site_domain_name)) > 2 
+    ? "static-${var.site_domain_name}"
+    : "static.${var.site_domain_name}"
+  )
+}
+
+module "cdn" {
+  source = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.69.0"
+  namespace         = var.eb_env_namespace
+  stage             = var.eb_env_stage
+  name              = var.eb_env_name
+  aliases           = [local.cdn_alias]
+  dns_alias_enabled = true
+  parent_zone_name  = var.aws_route53_zone_name
+
+  acm_certificate_arn = data.aws_acm_certificate.issued.arn
+
+  // depends_on = [module.acm_request_certificate]
+}
+
 module "elastic_beanstalk_environment" {
   source                     = "git::https://github.com/cloudposse/terraform-aws-elastic-beanstalk-environment.git?ref=tags/0.39.1"
   namespace                  = var.eb_env_namespace
