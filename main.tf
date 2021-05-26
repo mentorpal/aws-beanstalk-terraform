@@ -164,7 +164,11 @@ module "elastic_beanstalk_environment" {
                             TRANSCRIBE_AWS_ACCESS_KEY_ID=module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_ACCESS_KEY_ID,
                             TRANSCRIBE_AWS_REGION=var.aws_region,
                             TRANSCRIBE_AWS_SECRET_ACCESS_KEY=module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_SECRET_ACCESS_KEY,
-                            TRANSCRIBE_AWS_S3_BUCKET_SOURCE=module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_S3_BUCKET_SOURCE
+                            TRANSCRIBE_AWS_S3_BUCKET_SOURCE=module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_S3_BUCKET_SOURCE,
+                            CDN_UPLOAD_AWS_ACCESS_KEY_ID        = aws_iam_access_key.cdn_upload_policy_access_key.id,
+                            CDN_UPLOAD_AWS_SECRET_ACCESS_KEY    = aws_iam_access_key.cdn_upload_policy_access_key.secret,
+                            CDN_UPLOAD_AWS_REGION               = var.aws_region,
+                            CDN_UPLOAD_AWS_S3_BUCKET            = module.cdn.s3_bucket
                           }
                         )
 
@@ -251,4 +255,46 @@ resource "aws_lb_listener_rule" "redirect_http_to_https" {
       values = [var.site_domain_name]
     }
   }
+}
+
+
+
+######
+# IAM, policies, access key, etc. for CDN upload
+######
+
+locals {
+  cdn_upload_policy_name = "${local.namespace}-cdn-policy"
+  cdn_upload_user_name = "${local.namespace}-cdn-user"
+}
+
+data "aws_iam_policy_document" "cdn_upload_policy" {
+  statement {
+    sid = "1"
+    actions = [
+      "s3:*",
+    ]
+    resources = [
+      "${module.cdn.s3_bucket_arn}/*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "cdn_upload_policy" {
+  name   = local.cdn_upload_policy_name
+  path   = "/"
+  policy = data.aws_iam_policy_document.cdn_upload_policy.json
+}
+
+resource "aws_iam_user" "cdn_upload_user" {
+  name = local.cdn_upload_user_name
+}
+
+resource "aws_iam_user_policy_attachment" "cdn_upload_policy_attachment" {
+  user       = aws_iam_user.cdn_upload_user.name
+  policy_arn = aws_iam_policy.cdn_upload_policy.arn
+}
+
+resource "aws_iam_access_key" "cdn_upload_policy_access_key" {
+  user = aws_iam_user.cdn_upload_user.name
 }
