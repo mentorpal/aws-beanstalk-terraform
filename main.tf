@@ -51,6 +51,10 @@ locals {
   namespace = "${var.eb_env_namespace}-${var.eb_env_stage}-${var.eb_env_name}"
 }
 
+###
+# all infra for transcribing mentor videos with py-transcribe-aws module
+# (IAM, s3 bucket, keys, policies, etc)
+###
 module "transcribe_aws" {
     source                  = "git::https://github.com/ICTLearningSciences/py-transcribe-aws.git?ref=tags/1.4.0"
     transcribe_namespace    = local.namespace
@@ -66,6 +70,9 @@ locals {
   )
 }
 
+###
+# the cdn that serves videos from an s3 bucket, e.g. static.mentorpal.org
+###
 module "cdn" {
   source = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.69.0"
   namespace         = var.eb_env_namespace
@@ -74,12 +81,13 @@ module "cdn" {
   aliases           = [local.cdn_alias]
   dns_alias_enabled = true
   parent_zone_name  = var.aws_route53_zone_name
-
   acm_certificate_arn = data.aws_acm_certificate.issued.arn
-
-  // depends_on = [module.acm_request_certificate]
 }
 
+
+###
+# the main elastic beanstalk env for this app
+###
 module "elastic_beanstalk_environment" {
   source                     = "git::https://github.com/cloudposse/terraform-aws-elastic-beanstalk-environment.git?ref=tags/0.39.1"
   namespace                  = var.eb_env_namespace
@@ -127,8 +135,6 @@ module "elastic_beanstalk_environment" {
 
   vpc_id                  = module.vpc.vpc_id
   loadbalancer_subnets    = module.subnets.public_subnet_ids
-  # TODO change subnets for efs back to private after debugging
-  // application_subnets     = module.subnets.public_subnet_ids
   application_subnets     = module.subnets.private_subnet_ids
   allowed_security_groups = [
     module.vpc.vpc_default_security_group_id,
@@ -145,8 +151,6 @@ module "elastic_beanstalk_environment" {
 
   healthcheck_url  = var.eb_env_healthcheck_url
   application_port = var.eb_env_application_port
-  // https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platforms-supported.html
-  // https://docs.aws.amazon.com/elasticbeanstalk/latest/platforms/platforms-supported.html#platforms-supported.docker
   solution_stack_name = data.aws_elastic_beanstalk_solution_stack.multi_docker.name
   additional_settings = var.eb_env_additional_settings
   env_vars            = merge(
@@ -179,7 +183,10 @@ data "aws_iam_policy_document" "minimal_s3_permissions" {
   }
 }
 
-# Find a certificate that is issued
+###
+# Find a certificate for our domain that has status ISSUED
+# NOTE that for now, this infra depends on managing certs INSIDE AWS/ACM
+###
 data "aws_acm_certificate" "issued" {
   domain   = var.aws_acm_certificate_domain
   statuses = ["ISSUED"]
@@ -195,7 +202,6 @@ resource "aws_route53_record" "site_domain_name" {
   name            = var.site_domain_name
   type            = "A"
   allow_overwrite = true
-  # create alias (required: name, zone_id)
   alias {
     name                   = module.elastic_beanstalk_environment.endpoint
     zone_id                = data.aws_elastic_beanstalk_hosted_zone.current.id
@@ -203,6 +209,12 @@ resource "aws_route53_record" "site_domain_name" {
   }
 }
 
+###
+# Shared network file system that will store trained models, etc.
+# Using a network file system allows separate processes 
+# to read/write a common set of files 
+# (e.g. training writes models read by classifier api)
+###
 module "efs" {
   source             = "git::https://github.com/cloudposse/terraform-aws-efs.git?ref=tags/0.30.0"
   namespace          = var.eb_env_namespace
