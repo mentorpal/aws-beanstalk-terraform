@@ -61,7 +61,7 @@ module "transcribe_aws" {
 }
 
 locals {
-  cdn_alias = (
+  static_alias = (
     var.static_site_alias != "" 
     ? var.static_site_alias
     : length(split(".", var.site_domain_name)) > 2 
@@ -73,12 +73,12 @@ locals {
 ###
 # the cdn that serves videos from an s3 bucket, e.g. static.mentorpal.org
 ###
-module "cdn" {
+module "cdn_static" {
   source = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.69.0"
-  namespace         = var.eb_env_namespace
+  namespace         = "static-${var.eb_env_namespace}"
   stage             = var.eb_env_stage
   name              = var.eb_env_name
-  aliases           = [local.cdn_alias]
+  aliases           = [local.static_alias]
   dns_alias_enabled = true
   parent_zone_name  = var.aws_route53_zone_name
   acm_certificate_arn = data.aws_acm_certificate.issued.arn
@@ -165,10 +165,11 @@ module "elastic_beanstalk_environment" {
                             TRANSCRIBE_AWS_REGION=var.aws_region,
                             TRANSCRIBE_AWS_SECRET_ACCESS_KEY=module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_SECRET_ACCESS_KEY,
                             TRANSCRIBE_AWS_S3_BUCKET_SOURCE=module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_S3_BUCKET_SOURCE,
-                            CDN_UPLOAD_AWS_ACCESS_KEY_ID        = aws_iam_access_key.cdn_upload_policy_access_key.id,
-                            CDN_UPLOAD_AWS_SECRET_ACCESS_KEY    = aws_iam_access_key.cdn_upload_policy_access_key.secret,
-                            CDN_UPLOAD_AWS_REGION               = var.aws_region,
-                            CDN_UPLOAD_AWS_S3_BUCKET            = module.cdn.s3_bucket
+                            STATIC_UPLOAD_AWS_ACCESS_KEY_ID        = aws_iam_access_key.static_upload_policy_access_key.id,
+                            STATIC_UPLOAD_AWS_SECRET_ACCESS_KEY    = aws_iam_access_key.static_upload_policy_access_key.secret,
+                            STATIC_UPLOAD_AWS_REGION               = var.aws_region,
+                            STATIC_UPLOAD_AWS_S3_BUCKET            = module.cdn_static.s3_bucket
+                            STATIC_URL_BASE                        = "https://${local.static_alias}"
                           }
                         )
 
@@ -264,37 +265,37 @@ resource "aws_lb_listener_rule" "redirect_http_to_https" {
 ######
 
 locals {
-  cdn_upload_policy_name = "${local.namespace}-cdn-policy"
-  cdn_upload_user_name = "${local.namespace}-cdn-user"
+  static_upload_policy_name = "${local.namespace}-static-policy"
+  static_upload_user_name = "${local.namespace}-static-user"
 }
 
-data "aws_iam_policy_document" "cdn_upload_policy" {
+data "aws_iam_policy_document" "static_upload_policy" {
   statement {
     sid = "1"
     actions = [
       "s3:*",
     ]
     resources = [
-      "${module.cdn.s3_bucket_arn}/*"
+      "${module.cdn_static.s3_bucket_arn}/*"
     ]
   }
 }
 
-resource "aws_iam_policy" "cdn_upload_policy" {
-  name   = local.cdn_upload_policy_name
+resource "aws_iam_policy" "static_upload_policy" {
+  name   = local.static_upload_policy_name
   path   = "/"
-  policy = data.aws_iam_policy_document.cdn_upload_policy.json
+  policy = data.aws_iam_policy_document.static_upload_policy.json
 }
 
-resource "aws_iam_user" "cdn_upload_user" {
-  name = local.cdn_upload_user_name
+resource "aws_iam_user" "static_upload_user" {
+  name = local.static_upload_user_name
 }
 
-resource "aws_iam_user_policy_attachment" "cdn_upload_policy_attachment" {
-  user       = aws_iam_user.cdn_upload_user.name
-  policy_arn = aws_iam_policy.cdn_upload_policy.arn
+resource "aws_iam_user_policy_attachment" "static_upload_policy_attachment" {
+  user       = aws_iam_user.static_upload_user.name
+  policy_arn = aws_iam_policy.static_upload_policy.arn
 }
 
-resource "aws_iam_access_key" "cdn_upload_policy_access_key" {
-  user = aws_iam_user.cdn_upload_user.name
+resource "aws_iam_access_key" "static_upload_policy_access_key" {
+  user = aws_iam_user.static_upload_user.name
 }
