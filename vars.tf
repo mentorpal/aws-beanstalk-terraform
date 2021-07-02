@@ -282,6 +282,12 @@ variable "static_site_alias" {
   default       = ""
 }
 
+variable "static_cors_allowed_origins" {
+  type          = list(string)
+  description   = "list of cors allowed origins for static"
+  default       = []
+}
+
 variable "vpc_cidr_block" {
   type        = string
   description = "cidr for the vpc, generally can leave the default unless there is conflict"

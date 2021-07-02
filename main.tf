@@ -68,6 +68,15 @@ locals {
     ? "static-${var.site_domain_name}"
     : "static.${var.site_domain_name}"
   )
+
+  static_cors_allowed_origins = (
+    length(var.static_cors_allowed_origins) != 0
+    ? var.static_cors_allowed_origins
+    : [
+      var.site_domain_name,
+      "*.${var.site_domain_name}"
+    ]
+  )
 }
 
 ###
@@ -75,10 +84,11 @@ locals {
 ###
 module "cdn_static" {
   source = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.69.0"
-  namespace         = "static-${var.eb_env_namespace}"
-  stage             = var.eb_env_stage
-  name              = var.eb_env_name
-  aliases           = [local.static_alias]
+  namespace               = "static-${var.eb_env_namespace}"
+  stage                   = var.eb_env_stage
+  name                    = var.eb_env_name
+  aliases                 = [local.static_alias]
+  cors_allowed_origins    = local.static_cors_allowed_origins
   dns_alias_enabled = true
   parent_zone_name  = var.aws_route53_zone_name
   acm_certificate_arn = data.aws_acm_certificate.issued.arn
