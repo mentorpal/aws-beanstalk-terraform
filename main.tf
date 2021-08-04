@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 module "vpc" {
-  source     = "git::https://github.com/cloudposse/terraform-aws-vpc.git?ref=tags/0.21.1"
+  source     = "git::https://github.com/cloudposse/terraform-aws-vpc.git?ref=tags/0.25.0"
   namespace  = var.eb_env_namespace
   stage      = var.eb_env_stage
   name       = var.eb_env_name
@@ -14,7 +14,7 @@ module "vpc" {
 }
 
 module "subnets" {
-  source               = "git::https://github.com/cloudposse/terraform-aws-dynamic-subnets.git?ref=tags/0.39.0"
+  source               = "git::https://github.com/cloudposse/terraform-aws-dynamic-subnets.git?ref=tags/0.39.3"
   availability_zones   = var.aws_availability_zones
   namespace            = var.eb_env_namespace
   stage                = var.eb_env_stage
@@ -83,7 +83,7 @@ locals {
 # the cdn that serves videos from an s3 bucket, e.g. static.mentorpal.org
 ###
 module "cdn_static" {
-  source = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.69.0"
+  source = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.74.0"
   namespace               = "static-${var.eb_env_namespace}"
   stage                   = var.eb_env_stage
   name                    = var.eb_env_name
@@ -99,7 +99,7 @@ module "cdn_static" {
 # the main elastic beanstalk env for this app
 ###
 module "elastic_beanstalk_environment" {
-  source                     = "git::https://github.com/cloudposse/terraform-aws-elastic-beanstalk-environment.git?ref=tags/0.39.1"
+  source                     = "git::https://github.com/cloudposse/terraform-aws-elastic-beanstalk-environment.git?ref=tags/0.42.0"
   namespace                  = var.eb_env_namespace
   stage                      = var.eb_env_stage
   name                       = var.eb_env_name
@@ -231,7 +231,7 @@ resource "aws_route53_record" "site_domain_name" {
 # (e.g. training writes models read by classifier api)
 ###
 module "efs" {
-  source             = "git::https://github.com/cloudposse/terraform-aws-efs.git?ref=tags/0.30.0"
+  source             = "git::https://github.com/cloudposse/terraform-aws-efs.git?ref=tags/0.30.1"
   namespace          = var.eb_env_namespace
   stage              = var.eb_env_stage
   name               = var.eb_env_name
