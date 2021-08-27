@@ -181,7 +181,7 @@ module "elastic_beanstalk_environment" {
       STATIC_AWS_S3_BUCKET             = module.cdn_static.s3_bucket
       STATIC_URL_BASE                  = "https://${local.static_alias}"
       UPLOAD_QUEUE_NAME                = local.upload_queue_name
-      UPLOAD_CELERY_BROKER_URL         = "sqs://${aws_iam_access_key.upload_queue_user_access_key.id}:${aws_iam_access_key.upload_queue_user_access_key.secret}@"
+      UPLOAD_CELERY_BROKER_URL         = "sqs://${urlencode(aws_iam_access_key.upload_queue_user_access_key.id)}:${urlencode(aws_iam_access_key.upload_queue_user_access_key.secret)}@"
     }
   )
 
