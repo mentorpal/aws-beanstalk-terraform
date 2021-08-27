@@ -180,6 +180,8 @@ module "elastic_beanstalk_environment" {
       STATIC_AWS_REGION                = var.aws_region,
       STATIC_AWS_S3_BUCKET             = module.cdn_static.s3_bucket
       STATIC_URL_BASE                  = "https://${local.static_alias}"
+      UPLOAD_QUEUE_NAME                = local.upload_queue_policy_name
+      UPLOAD_CELERY_BROKER_URL        = "sqs://${aws_iam_access_key.upload_queue_policy_access_key.id}:${aws_iam_access_key.upload_queue_policy_access_key.secret}@"
     }
   )
 
@@ -320,3 +322,51 @@ resource "aws_iam_user_policy_attachment" "static_upload_policy_attachment" {
 resource "aws_iam_access_key" "static_upload_policy_access_key" {
   user = aws_iam_user.static_upload_user.name
 }
+
+
+######
+# All things SQS
+######
+
+locals {
+  upload_queue_name        = "${local.namespace}-uploads.fifo"
+  upload_queue_policy_name = "${local.namespace}-uploads-policy"
+  upload_queue_user_name   = "${local.namespace}-uploads-user"
+}
+
+resource "aws_sqs_queue" "upload_queue" {
+  name       = local.upload_queue_name
+  fifo_queue = true
+}
+
+data "aws_iam_policy_document" "upload_queue_policy" {
+  statement {
+    sid = "1"
+    actions = [
+      "sqs:DeleteMessage", "sqs:ReceiveMessage", "sqs:SendMessage",
+    ]
+    resources = [
+      aws_sqs_queue.upload_queue.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "upload_queue_policy" {
+  name   = local.upload_queue_policy_name
+  path   = "/"
+  policy = data.aws_iam_policy_document.upload_queue_policy.json
+}
+
+resource "aws_iam_user" "upload_queue_user" {
+  name = local.upload_queue_user_name
+}
+
+resource "aws_iam_user_policy_attachment" "upload_queue_policy_attachment" {
+  user       = aws_iam_user.upload_queue_user.name
+  policy_arn = aws_iam_policy.upload_queue_policy.arn
+}
+
+resource "aws_iam_access_key" "upload_queue_policy_access_key" {
+  user = aws_iam_user.upload_queue_user.name
+}
+
