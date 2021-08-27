@@ -181,7 +181,7 @@ module "elastic_beanstalk_environment" {
       STATIC_AWS_S3_BUCKET             = module.cdn_static.s3_bucket
       STATIC_URL_BASE                  = "https://${local.static_alias}"
       UPLOAD_QUEUE_NAME                = local.upload_queue_name
-      UPLOAD_CELERY_BROKER_URL        = "sqs://${aws_iam_access_key.upload_queue_policy_access_key.id}:${aws_iam_access_key.upload_queue_policy_access_key.secret}@"
+      UPLOAD_CELERY_BROKER_URL         = "sqs://${aws_iam_access_key.upload_queue_policy_access_key.id}:${aws_iam_access_key.upload_queue_policy_access_key.secret}@"
     }
   )
 
@@ -343,7 +343,7 @@ data "aws_iam_policy_document" "upload_queue_policy" {
   statement {
     sid = "1"
     actions = [
-      "sqs:DeleteMessage", "sqs:ReceiveMessage", "sqs:SendMessage",
+      "sqs:DeleteMessage", "sqs:ListQueues", "sqs:ReceiveMessage", "sqs:SendMessage",
     ]
     resources = [
       aws_sqs_queue.upload_queue.arn
