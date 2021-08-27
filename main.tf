@@ -342,6 +342,8 @@ data "aws_iam_policy_document" "sqs_shared_policy" {
   statement {
     sid = "1"
     actions = [
+      "sqs:GetQueueAttributes",
+      "sqs:GetQueueUrl",
       "sqs:ListQueues"
     ]
     resources = [
