@@ -181,7 +181,7 @@ module "elastic_beanstalk_environment" {
       STATIC_AWS_S3_BUCKET             = module.cdn_static.s3_bucket
       STATIC_URL_BASE                  = "https://${local.static_alias}"
       UPLOAD_QUEUE_NAME                = local.upload_queue_name
-      UPLOAD_CELERY_BROKER_URL         = "sqs://${aws_iam_access_key.upload_queue_policy_access_key.id}:${aws_iam_access_key.upload_queue_policy_access_key.secret}@"
+      UPLOAD_CELERY_BROKER_URL         = "sqs://${aws_iam_access_key.upload_queue_user_access_key.id}:${aws_iam_access_key.upload_queue_user_access_key.secret}@"
     }
   )
 
@@ -390,10 +390,10 @@ resource "aws_iam_user_policy_attachment" "upload_queue_policy_attachment" {
 
 resource "aws_iam_user_policy_attachment" "upload_queue_sqs_shared_policy_attachment" {
   user       = aws_iam_user.upload_queue_user.name
-  policy_arn = aws_iam_policy.upload_queue_policy.arn
+  policy_arn = aws_iam_policy.sqs_shared_policy.arn
 }
 
-resource "aws_iam_access_key" "upload_queue_policy_access_key" {
+resource "aws_iam_access_key" "upload_queue_user_access_key" {
   user = aws_iam_user.upload_queue_user.name
 }
 
