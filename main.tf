@@ -166,7 +166,11 @@ module "elastic_beanstalk_environment" {
   env_vars = merge(
     var.eb_env_env_vars,
     {
-      API_SECRET                       = var.secret_api_key,
+      API_SECRET                   = var.secret_api_key,
+      CLASSIFIER_QUEUE_NAME        = local.classifier_queue_name,
+      CLASSIFIER_CELERY_BROKER_URL = "sqs://${urlencode(aws_iam_access_key.classifier_queue_user_access_key.id)}:${urlencode(aws_iam_access_key.classifier_queue_user_access_key.secret)}@",
+      # eventually we should make celery result backend configurable via variable w default, but for now--always mongo, since we know it's there
+      CLASSIFIER_CELERY_RESULT_BACKEND = var.secret_mongo_uri,
       GOOGLE_CLIENT_ID                 = var.google_client_id,
       JWT_SECRET                       = var.secret_jwt_key,
       MONGO_URI                        = var.secret_mongo_uri,
@@ -178,10 +182,12 @@ module "elastic_beanstalk_environment" {
       STATIC_AWS_ACCESS_KEY_ID         = aws_iam_access_key.static_upload_policy_access_key.id,
       STATIC_AWS_SECRET_ACCESS_KEY     = aws_iam_access_key.static_upload_policy_access_key.secret,
       STATIC_AWS_REGION                = var.aws_region,
-      STATIC_AWS_S3_BUCKET             = module.cdn_static.s3_bucket
-      STATIC_URL_BASE                  = "https://${local.static_alias}"
+      STATIC_AWS_S3_BUCKET             = module.cdn_static.s3_bucket,
+      STATIC_URL_BASE                  = "https://${local.static_alias}",
       UPLOAD_QUEUE_NAME                = local.upload_queue_name
-      UPLOAD_CELERY_BROKER_URL         = "sqs://${urlencode(aws_iam_access_key.upload_queue_user_access_key.id)}:${urlencode(aws_iam_access_key.upload_queue_user_access_key.secret)}@"
+      UPLOAD_CELERY_BROKER_URL         = "sqs://${urlencode(aws_iam_access_key.upload_queue_user_access_key.id)}:${urlencode(aws_iam_access_key.upload_queue_user_access_key.secret)}@",
+      # eventually we should make celery result backend configurable via variable w default, but for now--always mongo, since we know it's there
+      UPLOAD_CELERY_RESULT_BACKEND = var.secret_mongo_uri
     }
   )
 
@@ -325,18 +331,17 @@ resource "aws_iam_access_key" "static_upload_policy_access_key" {
 
 
 
-######
-# All things SQS
-######
-
+##############################
+# All things SQS / Task Queue
+##############################
 
 locals {
   sqs_shared_policy_name = "${local.namespace}-sqs-shared-policy"
-  upload_queue_name        = "${local.namespace}-uploads.fifo"
-  upload_queue_policy_name = "${local.namespace}-uploads-policy"
-  upload_queue_user_name   = "${local.namespace}-uploads-user"
 }
 
+###################################################
+# Policy for persmissions all queue users need
+###################################################
 
 data "aws_iam_policy_document" "sqs_shared_policy" {
   statement {
@@ -356,6 +361,17 @@ resource "aws_iam_policy" "sqs_shared_policy" {
   name   = local.sqs_shared_policy_name
   path   = "/"
   policy = data.aws_iam_policy_document.sqs_shared_policy.json
+}
+
+
+###################################################
+# Task queue for UPLOADS
+###################################################
+
+locals {
+  upload_queue_name        = "${local.namespace}-uploads.fifo"
+  upload_queue_policy_name = "${local.namespace}-uploads-policy"
+  upload_queue_user_name   = "${local.namespace}-uploads-user"
 }
 
 resource "aws_sqs_queue" "upload_queue" {
@@ -398,4 +414,58 @@ resource "aws_iam_user_policy_attachment" "upload_queue_sqs_shared_policy_attach
 resource "aws_iam_access_key" "upload_queue_user_access_key" {
   user = aws_iam_user.upload_queue_user.name
 }
+
+
+
+###################################################
+# Task queue for CLASSIFIER (training)
+###################################################
+
+locals {
+  classifier_queue_name        = "${local.namespace}-classifier.fifo"
+  classifier_queue_policy_name = "${local.namespace}-classifier-policy"
+  classifier_queue_user_name   = "${local.namespace}-classifier-user"
+}
+
+resource "aws_sqs_queue" "classifier_queue" {
+  name       = local.classifier_queue_name
+  fifo_queue = true
+}
+
+data "aws_iam_policy_document" "classifier_queue_policy" {
+  statement {
+    sid = "1"
+    actions = [
+      "sqs:DeleteMessage", "sqs:ReceiveMessage", "sqs:SendMessage",
+    ]
+    resources = [
+      aws_sqs_queue.classifier_queue.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "classifier_queue_policy" {
+  name   = local.classifier_queue_policy_name
+  path   = "/"
+  policy = data.aws_iam_policy_document.classifier_queue_policy.json
+}
+
+resource "aws_iam_user" "classifier_queue_user" {
+  name = local.classifier_queue_user_name
+}
+
+resource "aws_iam_user_policy_attachment" "classifier_queue_policy_attachment" {
+  user       = aws_iam_user.classifier_queue_user.name
+  policy_arn = aws_iam_policy.classifier_queue_policy.arn
+}
+
+resource "aws_iam_user_policy_attachment" "classifier_queue_sqs_shared_policy_attachment" {
+  user       = aws_iam_user.classifier_queue_user.name
+  policy_arn = aws_iam_policy.sqs_shared_policy.arn
+}
+
+resource "aws_iam_access_key" "classifier_queue_user_access_key" {
+  user = aws_iam_user.classifier_queue_user.name
+}
+
 
