@@ -44,6 +44,10 @@ locals {
 
 resource "aws_sqs_queue" "upload_queue" {
   name       = local.upload_queue_name
+  # A FIFO queue in sqs guarantees "exactly once" delivery
+  # A non fifo queue would be "at least once" delivery.
+  # Fifo is slightly more expensive and doesn't have infinite scaling, 
+  # but seems better for our current uses (starting upload and training jobs)
   fifo_queue = true
 }
 
@@ -97,6 +101,10 @@ locals {
 
 resource "aws_sqs_queue" "classifier_queue" {
   name       = local.classifier_queue_name
+  # A FIFO queue in sqs guarantees "exactly once" delivery
+  # A non fifo queue would be "at least once" delivery.
+  # Fifo is slightly more expensive and doesn't have infinite scaling, 
+  # but seems better for our current uses (starting upload and training jobs)
   fifo_queue = true
 }
 

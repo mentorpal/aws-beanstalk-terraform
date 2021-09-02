@@ -33,10 +33,6 @@ data "aws_acm_certificate" "cdn" {
 module "cdn_static" {
   source  = "cloudposse/cloudfront-s3-cdn/aws"
   version = "0.75.0"
-  // source               = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.74.0"
-  // namespace            = "static-${local.namespace}"
-  // stage                = var.eb_env_stage
-  // name                 = var.eb_env_name
   aliases              = [local.static_alias]
   cors_allowed_origins = local.static_cors_allowed_origins
   dns_alias_enabled    = true
