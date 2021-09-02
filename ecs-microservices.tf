@@ -148,7 +148,7 @@ module "ecs_service_chat_client" {
   container_cpu      = 512
   container_memory   = 1024
   container_name     = "mentor_chat"
-  container_image    = "mentorpal/mentor-chat:4.2.0"
+  container_image    = "mentorpal/mentor-client:4.2.0"
   ecs_cluster_arn    = aws_ecs_cluster.default.arn
   ecs_load_balancers = [
     {
@@ -179,11 +179,11 @@ resource "aws_alb_target_group" "chat" {
 
 resource "aws_alb_listener_rule" "chat" {
   listener_arn = module.alb.https_listener_arn
-  priority     = 100
+  priority     = 101
 
   action {
     type             = "forward"
-    target_group_arn = aws_alb_target_group.admin.arn
+    target_group_arn = aws_alb_target_group.chat.arn
   }
 
   condition {

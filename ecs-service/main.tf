@@ -45,7 +45,7 @@ module "container_definition" {
 
 resource "aws_ecs_task_definition" "default" {
   count                    = local.enabled ? 1 : 0
-  family                   = module.this.id
+  family                   = "${module.this.id}-${var.container_name}"
   container_definitions    = module.container_definition.json_map_encoded_list
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
@@ -112,7 +112,7 @@ resource "aws_ecs_task_definition" "default" {
 
 resource "aws_ecs_service" "default" {
   count                              = local.enabled ? 1 : 0
-  name                               = module.this.id
+  name                               = "${module.this.id}-${var.container_name}"
   task_definition                    = coalesce(var.task_definition, "${join("", aws_ecs_task_definition.default.*.family)}:${join("", aws_ecs_task_definition.default.*.revision)}")
   desired_count                      = var.desired_count
   deployment_maximum_percent         = var.deployment_maximum_percent
