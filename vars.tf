@@ -3,10 +3,10 @@ variable "aws_acm_certificate_domain" {
   description = "domain name to find ssl certificate"
 }
 
-variable "aws_availability_zones" {
-  type        = list(string)
-  description = "List of availability zones"
-}
+// variable "aws_availability_zones" {
+//   type        = list(string)
+//   description = "List of availability zones"
+// }
 
 variable "aws_region" {
   type        = string
