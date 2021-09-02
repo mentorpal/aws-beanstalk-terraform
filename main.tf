@@ -586,7 +586,8 @@ module "ecs_service_admin_client" {
   ]
   vpc_id             = module.vpc.vpc_id
   security_group_ids = [module.vpc.vpc_default_security_group_id]
-  subnet_ids         = module.subnets.public_subnet_ids
+  // subnet_ids         = module.subnets.public_subnet_ids
+  subnet_ids         = module.subnets.private_subnet_ids
 
   context = module.this.context
 }
@@ -603,12 +604,6 @@ resource "aws_alb_target_group" "admin" {
   }
 }
 
-// resource "aws_alb_target_group_attachment" "admin" {
-//   target_group_arn = aws_alb_target_group.admin.arn
-//   target_id        = module.ecs_service_admin_client.service_arn
-//   port             = 80
-// }
-
 resource "aws_alb_listener_rule" "admin" {
   listener_arn = module.alb.https_listener_arn
   priority     = 100
@@ -620,7 +615,7 @@ resource "aws_alb_listener_rule" "admin" {
 
   condition {
     path_pattern {
-      values = ["/admin/*"]
+      values = ["/admin", "/admin/*"]
     }
   }
 }

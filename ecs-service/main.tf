@@ -6,7 +6,7 @@ module "container_definition" {
   container_image          = var.container_image
   container_cpu            = var.container_cpu
   container_memory         = var.container_memory
-  readonly_root_filesystem = true
+  readonly_root_filesystem = false
   port_mappings = [
     {
       containerPort = var.container_port,
