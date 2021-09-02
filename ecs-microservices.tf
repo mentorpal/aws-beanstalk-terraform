@@ -2,6 +2,59 @@
 # ECS Microservices
 ####################
 
+module "service_label" {
+  source  = "cloudposse/label/null"
+  version = "0.24.1"
+
+  attributes = ["service"]
+
+  context = module.this.context
+}
+
+
+# Service
+## Security Groups
+resource "aws_security_group" "ecs_service" {
+  vpc_id      = module.vpc.vpc_id
+  name        = "${module.this.id}-ecs-service"
+  description = "Allow ALL egress from ECS service"
+  tags        = module.service_label.tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "allow_all_egress" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = join("", aws_security_group.ecs_service.*.id)
+}
+
+resource "aws_security_group_rule" "allow_icmp_ingress" {
+  description       = "Enables ping command from anywhere, see https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html#sg-rules-ping"
+  type              = "ingress"
+  from_port         = 8
+  to_port           = 0
+  protocol          = "icmp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = join("", aws_security_group.ecs_service.*.id)
+}
+
+
+resource "aws_security_group_rule" "alb" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = module.vpc.vpc_default_security_group_id
+  security_group_id        = join("", aws_security_group.ecs_service.*.id)
+}
+
+
 
 # ECS Cluster (needed even if using FARGATE launch type)
 
@@ -38,8 +91,7 @@ module "ecs_service_admin_client" {
     }
   ]
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = [module.vpc.vpc_default_security_group_id]
-  // subnet_ids         = module.subnets.public_subnet_ids
+  security_group_ids = compact(concat([module.vpc.vpc_default_security_group_id], aws_security_group.ecs_service.*.id))
   subnet_ids         = module.subnets.private_subnet_ids
 
   context = module.this.context
@@ -72,3 +124,72 @@ resource "aws_alb_listener_rule" "admin" {
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+module "ecs_service_chat_client" {
+  source             = "./ecs-service"
+  alb_security_group = module.vpc.vpc_default_security_group_id
+  container_cpu      = 512
+  container_memory   = 1024
+  container_name     = "mentor_chat"
+  container_image    = "mentorpal/mentor-chat:4.2.0"
+  ecs_cluster_arn    = aws_ecs_cluster.default.arn
+  ecs_load_balancers = [
+    {
+      container_name   = "mentor_chat"
+      container_port   = 80
+      elb_name         = ""
+      target_group_arn = aws_alb_target_group.chat.arn
+    }
+  ]
+  vpc_id             = module.vpc.vpc_id
+  security_group_ids = compact(concat([module.vpc.vpc_default_security_group_id], aws_security_group.ecs_service.*.id))
+  subnet_ids         = module.subnets.private_subnet_ids
+
+  context = module.this.context
+}
+
+
+resource "aws_alb_target_group" "chat" {
+  name_prefix = "chat"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "ip"
+  health_check {
+    path = "/chat"
+  }
+}
+
+resource "aws_alb_listener_rule" "chat" {
+  listener_arn = module.alb.https_listener_arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.admin.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/chat", "/chat/*"]
+    }
+  }
+}
+

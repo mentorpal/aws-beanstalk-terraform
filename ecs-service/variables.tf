@@ -87,29 +87,29 @@ variable "enable_all_egress_rule" {
   default     = true
 }
 
-// variable "launch_type" {
-//   type        = string
-//   description = "The launch type on which to run your service. Valid values are `EC2` and `FARGATE`"
-//   default     = "FARGATE"
-// }
+variable "launch_type" {
+  type        = string
+  description = "The launch type on which to run your service. Valid values are `EC2` and `FARGATE`"
+  default     = "FARGATE"
+}
 
-// variable "platform_version" {
-//   type        = string
-//   default     = "LATEST"
-//   description = <<-EOT
-//     The platform version on which to run your service. Only applicable for `launch_type` set to `FARGATE`.
-//     More information about Fargate platform versions can be found in the AWS ECS User Guide.
-//     EOT
-// }
+variable "platform_version" {
+  type        = string
+  default     = "LATEST"
+  description = <<-EOT
+    The platform version on which to run your service. Only applicable for `launch_type` set to `FARGATE`.
+    More information about Fargate platform versions can be found in the AWS ECS User Guide.
+    EOT
+}
 
-// variable "scheduling_strategy" {
-//   type        = string
-//   default     = "REPLICA"
-//   description = <<-EOT
-//     The scheduling strategy to use for the service. The valid values are `REPLICA` and `DAEMON`.
-//     Note that Fargate tasks do not support the DAEMON scheduling strategy.
-//     EOT
-// }
+variable "scheduling_strategy" {
+  type        = string
+  default     = "REPLICA"
+  description = <<-EOT
+    The scheduling strategy to use for the service. The valid values are `REPLICA` and `DAEMON`.
+    Note that Fargate tasks do not support the DAEMON scheduling strategy.
+    EOT
+}
 
 // variable "ordered_placement_strategy" {
 //   type = list(object({
@@ -199,11 +199,11 @@ variable "desired_count" {
   default     = 1
 }
 
-// variable "deployment_controller_type" {
-//   type        = string
-//   description = "Type of deployment controller. Valid values are `CODE_DEPLOY` and `ECS`"
-//   default     = "ECS"
-// }
+variable "deployment_controller_type" {
+  type        = string
+  description = "Type of deployment controller. Valid values are `CODE_DEPLOY` and `ECS`"
+  default     = "ECS"
+}
 
 variable "deployment_maximum_percent" {
   type        = number
