@@ -31,15 +31,18 @@ data "aws_acm_certificate" "cdn" {
 # the cdn that serves videos from an s3 bucket, e.g. static.mentorpal.org
 ###
 module "cdn_static" {
-  source               = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.74.0"
-  namespace            = "static-${var.eb_env_namespace}"
-  stage                = var.eb_env_stage
-  name                 = var.eb_env_name
+  source  = "cloudposse/cloudfront-s3-cdn/aws"
+  version = "0.75.0"
+  // source               = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.74.0"
+  // namespace            = "static-${local.namespace}"
+  // stage                = var.eb_env_stage
+  // name                 = var.eb_env_name
   aliases              = [local.static_alias]
   cors_allowed_origins = local.static_cors_allowed_origins
   dns_alias_enabled    = true
   parent_zone_name     = var.aws_route53_zone_name
   acm_certificate_arn  = data.aws_acm_certificate.cdn.arn
+  context              = module.this.context
 }
 
 ######
