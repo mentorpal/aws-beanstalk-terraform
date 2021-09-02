@@ -45,10 +45,19 @@ resource "aws_security_group_rule" "allow_icmp_ingress" {
 }
 
 
-resource "aws_security_group_rule" "alb" {
+resource "aws_security_group_rule" "alb-ingress-80" {
   type                     = "ingress"
   from_port                = 80
   to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = module.vpc.vpc_default_security_group_id
+  security_group_id        = join("", aws_security_group.ecs_service.*.id)
+}
+
+resource "aws_security_group_rule" "alb-ingress-3001" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 3001
   protocol                 = "tcp"
   source_security_group_id = module.vpc.vpc_default_security_group_id
   security_group_id        = join("", aws_security_group.ecs_service.*.id)
@@ -83,14 +92,13 @@ module "ecs_service_admin_client" {
   alb_security_group = module.vpc.vpc_default_security_group_id
   container_cpu      = 512
   container_memory   = 1024
-  container_name     = "mentor_admin"
+  container_name     = "admin"
   container_image    = "mentorpal/mentor-admin:4.3.0-alpha.7"
   ecs_cluster_arn    = aws_ecs_cluster.default.arn
   ecs_load_balancers = [
     {
-      container_name   = "mentor_admin"
+      container_name   = "admin"
       container_port   = 80
-      elb_name         = ""
       target_group_arn = aws_alb_target_group.admin.arn
     }
   ]
@@ -147,14 +155,13 @@ module "ecs_service_chat_client" {
   alb_security_group = module.vpc.vpc_default_security_group_id
   container_cpu      = 512
   container_memory   = 1024
-  container_name     = "mentor_chat"
+  container_name     = "chat"
   container_image    = "mentorpal/mentor-client:4.2.0"
   ecs_cluster_arn    = aws_ecs_cluster.default.arn
   ecs_load_balancers = [
     {
-      container_name   = "mentor_chat"
+      container_name   = "chat"
       container_port   = 80
-      elb_name         = ""
       target_group_arn = aws_alb_target_group.chat.arn
     }
   ]
@@ -179,7 +186,6 @@ resource "aws_alb_target_group" "chat" {
 
 resource "aws_alb_listener_rule" "chat" {
   listener_arn = module.alb.https_listener_arn
-  priority     = 101
 
   action {
     type             = "forward"
@@ -189,6 +195,70 @@ resource "aws_alb_listener_rule" "chat" {
   condition {
     path_pattern {
       values = ["/chat", "/chat/*"]
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+module "ecs_service_graphql" {
+  source             = "./ecs-service"
+  alb_security_group = module.vpc.vpc_default_security_group_id
+  container_cpu      = 512
+  container_memory   = 1024
+  container_name     = "graphql"
+  container_image    = "mentorpal/mentor-graphql:4.2.0"
+  ecs_cluster_arn    = aws_ecs_cluster.default.arn
+  ecs_load_balancers = [
+    {
+      container_name   = "graphql"
+      container_port   = 3001
+      target_group_arn = aws_alb_target_group.graphql.arn
+    }
+  ]
+  container_port = 3001
+  task_environment = {
+    "API_SECRET" = var.secret_api_key,
+    "JWT_SECRET" = var.secret_jwt_key,
+    "MONGO_URI"  = var.secret_mongo_uri
+  }
+  vpc_id             = module.vpc.vpc_id
+  security_group_ids = local.security_group_ids
+  subnet_ids         = module.subnets.private_subnet_ids
+
+  context = module.this.context
+}
+
+
+resource "aws_alb_target_group" "graphql" {
+  name_prefix = "gql"
+  port        = 3001
+  protocol    = "HTTP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "ip"
+  health_check {
+    path = "/graphql"
+  }
+}
+
+resource "aws_alb_listener_rule" "graphql" {
+  listener_arn = module.alb.https_listener_arn
+  action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.graphql.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/graphql", "/graphql/*"]
     }
   }
 }

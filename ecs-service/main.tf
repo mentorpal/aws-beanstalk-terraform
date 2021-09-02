@@ -9,6 +9,7 @@ module "container_definition" {
   container_image          = var.container_image
   container_cpu            = var.container_cpu
   container_memory         = var.container_memory
+  map_environment          = var.task_environment
   readonly_root_filesystem = false
   port_mappings = [
     {
@@ -98,8 +99,8 @@ resource "aws_ecs_service" "default" {
     }
   }
 
-  cluster        = var.ecs_cluster_arn
-  tags           = module.this.tags
+  cluster = var.ecs_cluster_arn
+  tags    = module.this.tags
 
   deployment_controller {
     type = var.deployment_controller_type

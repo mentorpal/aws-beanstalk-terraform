@@ -34,7 +34,6 @@ variable "container_image" {
   description = "The docker image of the container"
 }
 
-
 variable "container_memory" {
   type        = number
   description = "The amount of memory (in MiB) to allow the container to use. This is a hard limit, if the container attempts to exceed the container_memory, the container is killed. This field is optional for Fargate launch type and the total amount of container_memory of all containers in a task will need to be lower than the task memory value"
@@ -50,12 +49,6 @@ variable "container_port" {
   description = "The port on the container to allow via the ingress security group"
   default     = 80
 }
-
-// variable "nlb_container_port" {
-//   type        = number
-//   description = "The port on the container to allow via the ingress security group"
-//   default     = 80
-// }
 
 variable "subnet_ids" {
   type        = list(string)
@@ -98,7 +91,6 @@ variable "scheduling_strategy" {
     Note that Fargate tasks do not support the DAEMON scheduling strategy.
     EOT
 }
-
 
 variable "task_cpu" {
   type        = number
@@ -197,4 +189,10 @@ variable "service_registries" {
   }))
   description = "The service discovery registries for the service. The maximum number of service_registries blocks is 1. The currently supported service registry is Amazon Route 53 Auto Naming Service - `aws_service_discovery_service`; see `service_registries` docs https://www.terraform.io/docs/providers/aws/r/ecs_service.html#service_registries-1"
   default     = []
+}
+
+variable "task_environment" {
+  type        = map(string)
+  description = "The environment variables to pass to the container. This is a map of string: {key: value}. map_environment overrides environment"
+  default     = null
 }
