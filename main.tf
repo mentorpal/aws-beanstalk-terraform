@@ -10,52 +10,6 @@ locals {
   availability_zones = slice(data.aws_availability_zones.available.names, 0, 2)
 }
 
-module "vpc" {
-  // source     = "git::https://github.com/cloudposse/terraform-aws-vpc.git?ref=tags/0.25.0"
-  source     = "cloudposse/vpc/aws"
-  version    = "0.25.0"
-  namespace  = var.eb_env_namespace
-  stage      = var.eb_env_stage
-  name       = var.eb_env_name
-  attributes = var.eb_env_attributes
-  tags       = var.eb_env_tags
-  delimiter  = var.eb_env_delimiter
-  cidr_block = var.vpc_cidr_block
-}
-
-module "subnets" {
-  source               = "git::https://github.com/cloudposse/terraform-aws-dynamic-subnets.git?ref=tags/0.39.3"
-  availability_zones   = local.availability_zones
-  namespace            = var.eb_env_namespace
-  stage                = var.eb_env_stage
-  name                 = var.eb_env_name
-  attributes           = var.eb_env_attributes
-  tags                 = var.eb_env_tags
-  delimiter            = var.eb_env_delimiter
-  vpc_id               = module.vpc.vpc_id
-  igw_id               = module.vpc.igw_id
-  cidr_block           = module.vpc.vpc_cidr_block
-  nat_gateway_enabled  = true
-  nat_instance_enabled = false
-}
-
-// module "elastic_beanstalk_application" {
-//   source      = "git::https://github.com/cloudposse/terraform-aws-elastic-beanstalk-application.git?ref=tags/0.11.0"
-//   namespace   = var.eb_env_namespace
-//   stage       = var.eb_env_stage
-//   name        = var.eb_env_name
-//   attributes  = var.eb_env_attributes
-//   tags        = var.eb_env_tags
-//   delimiter   = var.eb_env_delimiter
-//   description = var.eb_env_description
-// }
-
-// data "aws_elastic_beanstalk_hosted_zone" "current" {}
-
-// data "aws_elastic_beanstalk_solution_stack" "multi_docker" {
-//   most_recent = true
-//   name_regex  = "^64bit Amazon Linux (.*) Multi-container Docker (.*)$"
-// }
 
 locals {
   namespace = "${var.eb_env_namespace}-${var.eb_env_stage}-${var.eb_env_name}"
