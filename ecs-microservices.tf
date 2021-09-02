@@ -78,39 +78,6 @@ locals {
 }
 
 
-resource "aws_lb_listener_rule" "redirect_root_to_chat" {
-  listener_arn = module.alb.https_listener_arn
-  action {
-    type = "redirect"
-    redirect {
-      path = "/chat"
-      //   port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-
-    }
-  }
-  condition {
-    path_pattern {
-      values = ["/"]
-    }
-  }
-  //   condition {
-  //     host_header {
-  //       values = [var.site_domain_name]
-  //     }
-}
-
-
-
-
-
-
-
-
-
-
-
 module "ecs_service_admin_client" {
   source             = "./ecs-service"
   alb_security_group = module.vpc.vpc_default_security_group_id

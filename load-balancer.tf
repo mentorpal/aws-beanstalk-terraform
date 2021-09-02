@@ -1,4 +1,3 @@
-
 ########################################
 # Application Load Balancer
 ########################################
@@ -7,7 +6,6 @@
 data "aws_route53_zone" "main" {
   name = var.aws_route53_zone_name
 }
-
 
 module "alb" {
   source                                  = "cloudposse/alb/aws"
@@ -22,37 +20,12 @@ module "alb" {
   http_ingress_cidr_blocks                = ["0.0.0.0/0"]
   https_ingress_cidr_blocks               = ["0.0.0.0/0"]
   certificate_arn                         = data.aws_acm_certificate.default.arn
-  // health_check_interval                   = 60
-  // # need to finish the 'status' service and then change the health_check_path to '/status'
-  // health_check_path = "/admin"
   listener_https_fixed_response = {
     content_type = "text/plain"
     message_body = "OK"
     status_code  = 200
   }
   context = module.this.context
-}
-
-
-output "main_zone_id" {
-  description = "test this"
-  value       = data.aws_route53_zone.main.zone_id
-}
-
-
-output "site_domain_name" {
-  description = "test this"
-  value       = var.site_domain_name
-}
-
-output "alb_dns_name" {
-  description = "test this"
-  value       = module.alb.alb_dns_name
-}
-
-output "alb_zone_id" {
-  description = "test this"
-  value       = module.alb.alb_zone_id
 }
 
 # create dns record of type "A"
@@ -65,5 +38,29 @@ resource "aws_route53_record" "site_domain_name" {
     name                   = module.alb.alb_dns_name
     zone_id                = module.alb.alb_zone_id
     evaluate_target_health = true
+  }
+}
+
+
+###########################################################################
+# NOTE: 
+# This load-balancer rule redirects the / path to /chat
+# We're doing this for now because we don't have a home page for mentorpal
+# When we do get a home page, delete this rule
+###########################################################################
+resource "aws_lb_listener_rule" "redirect_root_to_chat" {
+  listener_arn = module.alb.https_listener_arn
+  action {
+    type = "redirect"
+    redirect {
+      path = "/chat"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+  condition {
+    path_pattern {
+      values = ["/"]
+    }
   }
 }

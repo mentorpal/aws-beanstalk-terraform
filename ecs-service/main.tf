@@ -77,7 +77,6 @@ resource "aws_ecs_service" "default" {
   launch_type                        = "FARGATE"
   platform_version                   = "LATEST"
   scheduling_strategy                = "REPLICA"
-  // enable_ecs_managed_tags            = var.enable_ecs_managed_tags
 
   dynamic "service_registries" {
     for_each = var.service_registries
