@@ -73,6 +73,43 @@ resource "aws_service_discovery_private_dns_namespace" "microservice" {
   vpc         = module.vpc.vpc_id
 }
 
+locals {
+  security_group_ids = compact(concat([module.vpc.vpc_default_security_group_id], aws_security_group.ecs_service.*.id))
+}
+
+
+resource "aws_lb_listener_rule" "redirect_root_to_chat" {
+  listener_arn = module.alb.https_listener_arn
+  action {
+    type = "redirect"
+    redirect {
+      path = "/chat"
+      //   port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+
+    }
+  }
+  condition {
+    path_pattern {
+      values = ["/"]
+    }
+  }
+  //   condition {
+  //     host_header {
+  //       values = [var.site_domain_name]
+  //     }
+}
+
+
+
+
+
+
+
+
+
+
 
 module "ecs_service_admin_client" {
   source             = "./ecs-service"
@@ -91,7 +128,7 @@ module "ecs_service_admin_client" {
     }
   ]
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = compact(concat([module.vpc.vpc_default_security_group_id], aws_security_group.ecs_service.*.id))
+  security_group_ids = local.security_group_ids
   subnet_ids         = module.subnets.private_subnet_ids
 
   context = module.this.context
@@ -138,10 +175,6 @@ resource "aws_alb_listener_rule" "admin" {
 
 
 
-
-
-
-
 module "ecs_service_chat_client" {
   source             = "./ecs-service"
   alb_security_group = module.vpc.vpc_default_security_group_id
@@ -159,7 +192,7 @@ module "ecs_service_chat_client" {
     }
   ]
   vpc_id             = module.vpc.vpc_id
-  security_group_ids = compact(concat([module.vpc.vpc_default_security_group_id], aws_security_group.ecs_service.*.id))
+  security_group_ids = local.security_group_ids
   subnet_ids         = module.subnets.private_subnet_ids
 
   context = module.this.context

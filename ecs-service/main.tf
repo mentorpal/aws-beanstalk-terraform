@@ -1,4 +1,3 @@
-
 locals {
   enabled = module.this.enabled
 }
@@ -20,28 +19,6 @@ module "container_definition" {
   ]
 }
 
-// module "ecs_service_task" {
-//   source                             = "cloudposse/ecs-alb-service-task/aws"
-//   version                            = "0.56.0"
-//   context                            = module.this.context
-//   alb_security_group                 = var.alb_security_group
-//   assign_public_ip                   = var.assign_public_ip
-//   container_definition_json          = module.container_definition.json_map_encoded_list
-//   deployment_maximum_percent         = var.deployment_maximum_percent
-//   deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
-//   desired_count                      = var.desired_count
-//   ecs_cluster_arn                    = var.ecs_cluster_arn
-//   ecs_load_balancers                 = var.ecs_load_balancers
-//   health_check_grace_period_seconds  = var.health_check_grace_period_seconds
-//   ignore_changes_task_definition     = var.ignore_changes_task_definition
-//   launch_type                        = "FARGATE"
-//   vpc_id                             = var.vpc_id
-//   security_group_ids                 = var.security_group_ids
-//   subnet_ids                         = var.subnet_ids
-//   task_cpu                           = var.task_cpu
-//   task_memory                        = var.task_memory
-//   use_alb_security_group             = var.use_alb_security_group
-// }
 
 resource "aws_ecs_task_definition" "default" {
   count                    = local.enabled ? 1 : 0
@@ -51,26 +28,7 @@ resource "aws_ecs_task_definition" "default" {
   network_mode             = "awsvpc"
   cpu                      = var.task_cpu
   memory                   = var.task_memory
-  // execution_role_arn       = length(var.task_exec_role_arn) > 0 ? var.task_exec_role_arn : join("", aws_iam_role.ecs_exec.*.arn)
-  // task_role_arn            = length(var.task_role_arn) > 0 ? var.task_role_arn : join("", aws_iam_role.ecs_task.*.arn)
-
-  // dynamic "proxy_configuration" {
-  //   for_each = var.proxy_configuration == null ? [] : [var.proxy_configuration]
-  //   content {
-  //     type           = lookup(proxy_configuration.value, "type", "APPMESH")
-  //     container_name = proxy_configuration.value.container_name
-  //     properties     = proxy_configuration.value.properties
-  //   }
-  // }
-
-  // dynamic "placement_constraints" {
-  //   for_each = var.task_placement_constraints
-  //   content {
-  //     type       = placement_constraints.value.type
-  //     expression = lookup(placement_constraints.value, "expression", null)
-  //   }
-  // }
-
+  
   dynamic "volume" {
     for_each = var.volumes
     content {
@@ -122,19 +80,6 @@ resource "aws_ecs_service" "default" {
   platform_version                   = "LATEST"
   scheduling_strategy                = "REPLICA"
   enable_ecs_managed_tags            = var.enable_ecs_managed_tags
-  // iam_role                           = local.enable_ecs_service_role ? coalesce(var.service_role_arn, join("", aws_iam_role.ecs_service.*.arn)) : null
-  // wait_for_steady_state              = var.wait_for_steady_state
-  // force_new_deployment               = var.force_new_deployment
-  // enable_execute_command             = var.exec_enabled
-
-  // dynamic "capacity_provider_strategy" {
-  //   for_each = var.capacity_provider_strategies
-  //   content {
-  //     capacity_provider = capacity_provider_strategy.value.capacity_provider
-  //     weight            = capacity_provider_strategy.value.weight
-  //     base              = lookup(capacity_provider_strategy.value, "base", null)
-  //   }
-  // }
 
   dynamic "service_registries" {
     for_each = var.service_registries
@@ -145,22 +90,6 @@ resource "aws_ecs_service" "default" {
       container_port = lookup(service_registries.value, "container_port", null)
     }
   }
-
-  // dynamic "ordered_placement_strategy" {
-  //   for_each = var.ordered_placement_strategy
-  //   content {
-  //     type  = ordered_placement_strategy.value.type
-  //     field = lookup(ordered_placement_strategy.value, "field", null)
-  //   }
-  // }
-
-  // dynamic "placement_constraints" {
-  //   for_each = var.service_placement_constraints
-  //   content {
-  //     type       = placement_constraints.value.type
-  //     expression = lookup(placement_constraints.value, "expression", null)
-  //   }
-  // }
 
   dynamic "load_balancer" {
     for_each = var.ecs_load_balancers
@@ -189,15 +118,4 @@ resource "aws_ecs_service" "default" {
     assign_public_ip = false
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 
