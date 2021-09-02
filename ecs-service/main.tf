@@ -19,7 +19,6 @@ module "container_definition" {
   ]
 }
 
-
 resource "aws_ecs_task_definition" "default" {
   count                    = local.enabled ? 1 : 0
   family                   = "${module.this.id}-${var.container_name}"
@@ -28,7 +27,7 @@ resource "aws_ecs_task_definition" "default" {
   network_mode             = "awsvpc"
   cpu                      = var.task_cpu
   memory                   = var.task_memory
-  
+
   dynamic "volume" {
     for_each = var.volumes
     content {
@@ -67,11 +66,10 @@ resource "aws_ecs_task_definition" "default" {
   tags = module.this.tags
 }
 
-
 resource "aws_ecs_service" "default" {
   count                              = local.enabled ? 1 : 0
   name                               = "${module.this.id}-${var.container_name}"
-  task_definition                    = coalesce(var.task_definition, "${join("", aws_ecs_task_definition.default.*.family)}:${join("", aws_ecs_task_definition.default.*.revision)}")
+  task_definition                    = "${join("", aws_ecs_task_definition.default.*.family)}:${join("", aws_ecs_task_definition.default.*.revision)}"
   desired_count                      = var.desired_count
   deployment_maximum_percent         = var.deployment_maximum_percent
   deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
@@ -79,7 +77,7 @@ resource "aws_ecs_service" "default" {
   launch_type                        = "FARGATE"
   platform_version                   = "LATEST"
   scheduling_strategy                = "REPLICA"
-  enable_ecs_managed_tags            = var.enable_ecs_managed_tags
+  // enable_ecs_managed_tags            = var.enable_ecs_managed_tags
 
   dynamic "service_registries" {
     for_each = var.service_registries
@@ -96,14 +94,13 @@ resource "aws_ecs_service" "default" {
     content {
       container_name   = load_balancer.value.container_name
       container_port   = load_balancer.value.container_port
-      elb_name         = lookup(load_balancer.value, "elb_name", null)
+      elb_name         = null
       target_group_arn = lookup(load_balancer.value, "target_group_arn", null)
     }
   }
 
   cluster        = var.ecs_cluster_arn
-  propagate_tags = var.propagate_tags
-  tags           = var.use_old_arn ? null : module.this.tags
+  tags           = module.this.tags
 
   deployment_controller {
     type = var.deployment_controller_type
@@ -111,11 +108,8 @@ resource "aws_ecs_service" "default" {
 
   # https://www.terraform.io/docs/providers/aws/r/ecs_service.html#network_configuration
   network_configuration {
-
-    // security_groups  = compact(concat(var.security_group_ids, aws_security_group.ecs_service.*.id))
     security_groups  = var.security_group_ids
     subnets          = var.subnet_ids
     assign_public_ip = false
   }
 }
-
