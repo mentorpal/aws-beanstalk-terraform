@@ -92,6 +92,18 @@ variable "scheduling_strategy" {
     EOT
 }
 
+variable "service_name" {
+  type        = string
+  default     = ""
+  description = "the private-dns name of the service (if not null will be registered)"
+}
+
+variable "service_namespace_id" {
+  type        = string
+  default     = ""
+  description = "id of the aws_service_discovery_private_dns_namespace for services"
+}
+
 variable "task_cpu" {
   type        = number
   description = "The number of CPU units used by the task. If using `FARGATE` launch type `task_cpu` must match [supported memory values](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size)"

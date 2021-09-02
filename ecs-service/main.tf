@@ -113,3 +113,20 @@ resource "aws_ecs_service" "default" {
     assign_public_ip = false
   }
 }
+
+
+resource "aws_service_discovery_service" "default" {
+  count = var.service_name != "" ? 1 : 0
+  name  = var.service_name
+  dns_config {
+    dns_records {
+      ttl  = 10
+      type = "A"
+    }
+    namespace_id   = var.service_namespace_id
+    routing_policy = "MULTIVALUE"
+  }
+  health_check_custom_config {
+    failure_threshold = 2
+  }
+}

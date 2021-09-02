@@ -63,6 +63,15 @@ resource "aws_security_group_rule" "alb-ingress-3001" {
   security_group_id        = join("", aws_security_group.ecs_service.*.id)
 }
 
+resource "aws_security_group_rule" "alb-ingress-5000" {
+  type                     = "ingress"
+  from_port                = 80
+  to_port                  = 5000
+  protocol                 = "tcp"
+  source_security_group_id = module.vpc.vpc_default_security_group_id
+  security_group_id        = join("", aws_security_group.ecs_service.*.id)
+}
+
 
 
 # ECS Cluster (needed even if using FARGATE launch type)
@@ -76,8 +85,8 @@ resource "aws_ecs_cluster" "default" {
   }
 }
 
-resource "aws_service_discovery_private_dns_namespace" "microservice" {
-  name        = "microservice"
+resource "aws_service_discovery_private_dns_namespace" "service" {
+  name        = "service"
   description = "a private DNS namespace. All microservices will register themselves with names in this namespace for intercommunication among microservices, e.g. training.microservice => graphql.microservice"
   vpc         = module.vpc.vpc_id
 }
@@ -123,13 +132,10 @@ resource "aws_alb_target_group" "admin" {
 
 resource "aws_alb_listener_rule" "admin" {
   listener_arn = module.alb.https_listener_arn
-  priority     = 100
-
   action {
     type             = "forward"
     target_group_arn = aws_alb_target_group.admin.arn
   }
-
   condition {
     path_pattern {
       values = ["/admin", "/admin/*"]
@@ -224,15 +230,17 @@ module "ecs_service_graphql" {
       target_group_arn = aws_alb_target_group.graphql.arn
     }
   ]
-  container_port = 3001
+  container_port       = 3001
+  security_group_ids   = local.security_group_ids
+  service_name         = "graphql"
+  service_namespace_id = aws_service_discovery_private_dns_namespace.service.id
+  subnet_ids           = module.subnets.private_subnet_ids
   task_environment = {
     "API_SECRET" = var.secret_api_key,
     "JWT_SECRET" = var.secret_jwt_key,
     "MONGO_URI"  = var.secret_mongo_uri
   }
-  vpc_id             = module.vpc.vpc_id
-  security_group_ids = local.security_group_ids
-  subnet_ids         = module.subnets.private_subnet_ids
+  vpc_id = module.vpc.vpc_id
 
   context = module.this.context
 }
@@ -259,6 +267,72 @@ resource "aws_alb_listener_rule" "graphql" {
   condition {
     path_pattern {
       values = ["/graphql", "/graphql/*"]
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+module "ecs_service_classifier" {
+  source             = "./ecs-service"
+  alb_security_group = module.vpc.vpc_default_security_group_id
+  container_cpu      = 2048
+  container_memory   = 4096
+  container_name     = "classifier"
+  container_image    = "mentorpal/mentor-classifier-api:4.3.0-alpha.2"
+  ecs_cluster_arn    = aws_ecs_cluster.default.arn
+  ecs_load_balancers = [
+    {
+      container_name   = "classifier"
+      container_port   = 5000
+      target_group_arn = aws_alb_target_group.graphql.arn
+    }
+  ]
+  container_port = 5000
+  task_cpu       = 2048
+  task_environment = {
+    "GRAPHQL_ENDPOINT"       = "http://graphql.service:3001/graphql",
+    "STATUS_URL_FORCE_HTTPS" = true
+  }
+  task_memory        = 4096
+  vpc_id             = module.vpc.vpc_id
+  security_group_ids = local.security_group_ids
+  subnet_ids         = module.subnets.private_subnet_ids
+
+  context = module.this.context
+}
+
+
+resource "aws_alb_target_group" "classifier" {
+  name_prefix = "clsapi"
+  port        = 5000
+  protocol    = "HTTP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "ip"
+  health_check {
+    path = "/classifier"
+  }
+}
+
+resource "aws_alb_listener_rule" "classifier" {
+  listener_arn = module.alb.https_listener_arn
+  action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.classifier.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/classifier", "/classifier/*"]
     }
   }
 }
