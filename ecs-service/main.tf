@@ -79,13 +79,14 @@ resource "aws_ecs_service" "default" {
   platform_version                   = "LATEST"
   scheduling_strategy                = "REPLICA"
 
+  # if a service has a 'service_name'
+  # (i.e. if other services need to connect to it)
+  # then this is what triggers the service to register itself w DNS
   dynamic "service_registries" {
-    for_each = var.service_registries
+    for_each = var.service_name != "" ? [true] : []
     content {
-      registry_arn   = service_registries.value.registry_arn
-      port           = lookup(service_registries.value, "port", null)
-      container_name = lookup(service_registries.value, "container_name", null)
-      container_port = lookup(service_registries.value, "container_port", null)
+      registry_arn   = aws_service_discovery_service.default[0].arn
+      container_name = var.container_name
     }
   }
 
@@ -114,7 +115,10 @@ resource "aws_ecs_service" "default" {
   }
 }
 
-
+# if a service has a 'service_name'
+# (i.e. if other services need to connect to it)
+# then configures the private DNS record 
+# (actual creation is trigger by the service, see above)
 resource "aws_service_discovery_service" "default" {
   count = var.service_name != "" ? 1 : 0
   name  = var.service_name

@@ -92,17 +92,17 @@ resource "aws_service_discovery_private_dns_namespace" "service" {
 }
 
 locals {
-  security_group_ids = compact(concat([module.vpc.vpc_default_security_group_id], aws_security_group.ecs_service.*.id))
+  security_group_ids = compact(concat([module.vpc.vpc_default_security_group_id], aws_security_group.ecs_service.*.id, [module.efs.security_group_id]))
 }
 
 
-module "ecs_service_admin_client" {
+module "ecs_service_admin" {
   source             = "./ecs-service"
   alb_security_group = module.vpc.vpc_default_security_group_id
   container_cpu      = 512
   container_memory   = 1024
   container_name     = "admin"
-  container_image    = "mentorpal/mentor-admin:4.3.0-alpha.7"
+  container_image    = "mentorpal/mentor-admin:4.3.0-alpha.6"
   ecs_cluster_arn    = aws_ecs_cluster.default.arn
   ecs_load_balancers = [
     {
@@ -156,7 +156,7 @@ resource "aws_alb_listener_rule" "admin" {
 
 
 
-module "ecs_service_chat_client" {
+module "ecs_service_chat" {
   source             = "./ecs-service"
   alb_security_group = module.vpc.vpc_default_security_group_id
   container_cpu      = 512
@@ -210,6 +210,64 @@ resource "aws_alb_listener_rule" "chat" {
 
 
 
+module "ecs_service_classifier" {
+  source             = "./ecs-service"
+  alb_security_group = module.vpc.vpc_default_security_group_id
+  container_cpu      = 2048
+  container_memory   = 4096
+  container_name     = "classifier"
+  container_image    = "mentorpal/mentor-classifier-api:4.4.0-alpha.4"
+  ecs_cluster_arn    = aws_ecs_cluster.default.arn
+  ecs_load_balancers = [
+    {
+      container_name   = "classifier"
+      container_port   = 5000
+      target_group_arn = aws_alb_target_group.graphql.arn
+    }
+  ]
+  container_port = 5000
+  task_cpu       = 2048
+  task_environment = {
+    "GOOGLE_CLIENT_ID"       = var.google_client_id,
+    "GRAPHQL_ENDPOINT"       = "http://graphql.service:3001/graphql",
+    "STATUS_URL_FORCE_HTTPS" = true
+  }
+  task_memory        = 4096
+  vpc_id             = module.vpc.vpc_id
+  security_group_ids = local.security_group_ids
+  subnet_ids         = module.subnets.private_subnet_ids
+
+  context = module.this.context
+}
+
+
+resource "aws_alb_target_group" "classifier" {
+  name_prefix = "clsapi"
+  port        = 5000
+  protocol    = "HTTP"
+  vpc_id      = module.vpc.vpc_id
+  target_type = "ip"
+  health_check {
+    path = "/classifier"
+  }
+}
+
+resource "aws_alb_listener_rule" "classifier" {
+  listener_arn = module.alb.https_listener_arn
+  action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.classifier.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/classifier", "/classifier/*"]
+    }
+  }
+}
+
+
+
 
 
 
@@ -236,9 +294,10 @@ module "ecs_service_graphql" {
   service_namespace_id = aws_service_discovery_private_dns_namespace.service.id
   subnet_ids           = module.subnets.private_subnet_ids
   task_environment = {
-    "API_SECRET" = var.secret_api_key,
-    "JWT_SECRET" = var.secret_jwt_key,
-    "MONGO_URI"  = var.secret_mongo_uri
+    "API_SECRET"       = var.secret_api_key,
+    "GOOGLE_CLIENT_ID" = var.google_client_id,
+    "JWT_SECRET"       = var.secret_jwt_key,
+    "MONGO_URI"        = var.secret_mongo_uri
   }
   vpc_id = module.vpc.vpc_id
 
@@ -279,61 +338,4 @@ resource "aws_alb_listener_rule" "graphql" {
 
 
 
-
-
-
-module "ecs_service_classifier" {
-  source             = "./ecs-service"
-  alb_security_group = module.vpc.vpc_default_security_group_id
-  container_cpu      = 2048
-  container_memory   = 4096
-  container_name     = "classifier"
-  container_image    = "mentorpal/mentor-classifier-api:4.3.0-alpha.2"
-  ecs_cluster_arn    = aws_ecs_cluster.default.arn
-  ecs_load_balancers = [
-    {
-      container_name   = "classifier"
-      container_port   = 5000
-      target_group_arn = aws_alb_target_group.graphql.arn
-    }
-  ]
-  container_port = 5000
-  task_cpu       = 2048
-  task_environment = {
-    "GRAPHQL_ENDPOINT"       = "http://graphql.service:3001/graphql",
-    "STATUS_URL_FORCE_HTTPS" = true
-  }
-  task_memory        = 4096
-  vpc_id             = module.vpc.vpc_id
-  security_group_ids = local.security_group_ids
-  subnet_ids         = module.subnets.private_subnet_ids
-
-  context = module.this.context
-}
-
-
-resource "aws_alb_target_group" "classifier" {
-  name_prefix = "clsapi"
-  port        = 5000
-  protocol    = "HTTP"
-  vpc_id      = module.vpc.vpc_id
-  target_type = "ip"
-  health_check {
-    path = "/classifier"
-  }
-}
-
-resource "aws_alb_listener_rule" "classifier" {
-  listener_arn = module.alb.https_listener_arn
-  action {
-    type             = "forward"
-    target_group_arn = aws_alb_target_group.classifier.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/classifier", "/classifier/*"]
-    }
-  }
-}
 
