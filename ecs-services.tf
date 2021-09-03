@@ -210,61 +210,61 @@ resource "aws_alb_listener_rule" "chat" {
 
 
 
-module "ecs_service_classifier" {
-  source             = "./ecs-service"
-  alb_security_group = module.vpc.vpc_default_security_group_id
-  container_cpu      = 2048
-  container_memory   = 4096
-  container_name     = "classifier"
-  container_image    = "mentorpal/mentor-classifier-api:4.4.0-alpha.4"
-  ecs_cluster_arn    = aws_ecs_cluster.default.arn
-  ecs_load_balancers = [
-    {
-      container_name   = "classifier"
-      container_port   = 5000
-      target_group_arn = aws_alb_target_group.classifier.arn
-    }
-  ]
-  container_port = 5000
-  task_cpu       = 2048
-  task_environment = {
-    "GOOGLE_CLIENT_ID"       = var.google_client_id,
-    "GRAPHQL_ENDPOINT"       = "http://graphql.service:3001/graphql",
-    "STATUS_URL_FORCE_HTTPS" = true
-  }
-  task_memory        = 4096
-  vpc_id             = module.vpc.vpc_id
-  security_group_ids = local.security_group_ids
-  subnet_ids         = module.subnets.private_subnet_ids
+// module "ecs_service_classifier" {
+//   source             = "./ecs-service"
+//   alb_security_group = module.vpc.vpc_default_security_group_id
+//   container_cpu      = 2048
+//   container_memory   = 4096
+//   container_name     = "classifier"
+//   container_image    = "mentorpal/mentor-classifier-api:4.4.0-alpha.4"
+//   ecs_cluster_arn    = aws_ecs_cluster.default.arn
+//   ecs_load_balancers = [
+//     {
+//       container_name   = "classifier"
+//       container_port   = 5000
+//       target_group_arn = aws_alb_target_group.classifier.arn
+//     }
+//   ]
+//   container_port = 5000
+//   task_cpu       = 2048
+//   task_environment = {
+//     "GOOGLE_CLIENT_ID"       = var.google_client_id,
+//     "GRAPHQL_ENDPOINT"       = "http://graphql.service:3001/graphql",
+//     "STATUS_URL_FORCE_HTTPS" = true
+//   }
+//   task_memory        = 4096
+//   vpc_id             = module.vpc.vpc_id
+//   security_group_ids = local.security_group_ids
+//   subnet_ids         = module.subnets.private_subnet_ids
 
-  context = module.this.context
-}
+//   context = module.this.context
+// }
 
 
-resource "aws_alb_target_group" "classifier" {
-  name_prefix = "clsapi"
-  port        = 5000
-  protocol    = "HTTP"
-  vpc_id      = module.vpc.vpc_id
-  target_type = "ip"
-  health_check {
-    path = "/classifier"
-  }
-}
+// resource "aws_alb_target_group" "classifier" {
+//   name_prefix = "clsapi"
+//   port        = 5000
+//   protocol    = "HTTP"
+//   vpc_id      = module.vpc.vpc_id
+//   target_type = "ip"
+//   health_check {
+//     path = "/classifier"
+//   }
+// }
 
-resource "aws_alb_listener_rule" "classifier" {
-  listener_arn = module.alb.https_listener_arn
-  action {
-    type             = "forward"
-    target_group_arn = aws_alb_target_group.classifier.arn
-  }
+// resource "aws_alb_listener_rule" "classifier" {
+//   listener_arn = module.alb.https_listener_arn
+//   action {
+//     type             = "forward"
+//     target_group_arn = aws_alb_target_group.classifier.arn
+//   }
 
-  condition {
-    path_pattern {
-      values = ["/classifier", "/classifier/*"]
-    }
-  }
-}
+//   condition {
+//     path_pattern {
+//       values = ["/classifier", "/classifier/*"]
+//     }
+//   }
+// }
 
 
 
@@ -277,9 +277,10 @@ module "ecs_service_graphql" {
   source             = "./ecs-service"
   alb_security_group = module.vpc.vpc_default_security_group_id
   container_cpu      = 512
+  container_image    = "mentorpal/mentor-graphql:4.2.0"
   container_memory   = 1024
   container_name     = "graphql"
-  container_image    = "mentorpal/mentor-graphql:4.2.0"
+  container_port       = 3001
   ecs_cluster_arn    = aws_ecs_cluster.default.arn
   ecs_load_balancers = [
     {
@@ -288,7 +289,6 @@ module "ecs_service_graphql" {
       target_group_arn = aws_alb_target_group.graphql.arn
     }
   ]
-  container_port       = 3001
   security_group_ids   = local.security_group_ids
   service_name         = "graphql"
   service_namespace_id = aws_service_discovery_private_dns_namespace.service.id
