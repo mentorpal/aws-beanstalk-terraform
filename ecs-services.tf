@@ -222,7 +222,7 @@ module "ecs_service_classifier" {
     {
       container_name   = "classifier"
       container_port   = 5000
-      target_group_arn = aws_alb_target_group.graphql.arn
+      target_group_arn = aws_alb_target_group.classifier.arn
     }
   ]
   container_port = 5000
