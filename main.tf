@@ -170,6 +170,7 @@ module "elastic_beanstalk_environment" {
       GOOGLE_CLIENT_ID                 = var.google_client_id,
       JWT_SECRET                       = var.secret_jwt_key,
       MONGO_URI                        = var.secret_mongo_uri,
+      LRS_PASSWORD                     = var.secret_lrs_password
       TRANSCRIBE_MODULE_PATH           = module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_MODULE_PATH,
       TRANSCRIBE_AWS_ACCESS_KEY_ID     = module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_ACCESS_KEY_ID,
       TRANSCRIBE_AWS_REGION            = var.aws_region,

@@ -17,6 +17,7 @@ module "mentorpal_beanstalk_deployment" {
     secret_api_key                  = var.secret_api_key
     secret_jwt_key                  = var.secret_jwt_key
     secret_mongo_uri                = var.secret_mongo_uri
+    secret_lrs_password             = var.secret_lrs_password
     site_domain_name                = var.site_domain_name
     vpc_cidr_block                  = var.vpc_cidr_block
 }
@@ -78,6 +79,11 @@ variable "secret_jwt_key" {
 variable "secret_mongo_uri" {
   type        = string
   description = "fully qualified mongo uri (includes user and password) for connections to a mongodb instance backend (presumably external, e.g. mongodb.com)"
+}
+
+variable "secret_lrs_password" {
+  type        = string
+  description = "password for lrs api"
 }
 
 variable "site_domain_name" {

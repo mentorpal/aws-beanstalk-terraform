@@ -271,6 +271,11 @@ variable "secret_mongo_uri" {
   description = "fully qualified mongo uri (includes user and password) for connections to a mongodb instance backend (presumably external, e.g. mongodb.com)"
 }
 
+variable "secret_lrs_password" {
+  type        = string
+  description = "password for lrs api"
+}
+
 variable "site_domain_name" {
   type        = string
   description = "the public domain name for this site, e.g. dev.mentorpal.org"

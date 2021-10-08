@@ -6,3 +6,4 @@
 secret_api_key = "<set-me>"
 secret_jwt_key = "<set-me>"
 secret_mongo_uri = "<mongo url w user, password, etc.>"
+secret_lrs_password = "<set-me>"
