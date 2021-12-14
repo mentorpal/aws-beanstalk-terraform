@@ -141,17 +141,15 @@ EOF
 resource "aws_iam_role_policy" "to_kinesis" {
   role = aws_iam_role.subscription.name
 
-  policy = <<EOF
-{
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": ["firehose:*"],
-      "Resource": [aws_kinesis_firehose_delivery_stream.logs_stream.arn]
-    }
-  ]
-}
-EOF
+  policy = jsonencode({
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : ["firehose:*"],
+        "Resource" : ["${aws_kinesis_firehose_delivery_stream.logs_stream.arn}"]
+      }
+    ]
+  })
 }
 
 # these are created by eb but to make sure tf apply does not fail:
