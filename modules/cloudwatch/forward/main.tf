@@ -163,7 +163,7 @@ resource "aws_cloudwatch_log_group" "cw_log_groups" {
 resource "aws_cloudwatch_log_subscription_filter" "cw_subscriptions" {
   for_each = local.log_groups
 
-  name            = "${each.key}-${var.name}-kinesis-filter"
+  name            = join("", [reverse(split("/", each.key))[0], "-${var.name}-kinesis-filter"])
   role_arn        = aws_iam_role.subscription.arn
   log_group_name  = each.key
   filter_pattern  = "[]"
