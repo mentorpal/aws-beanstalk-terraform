@@ -5,7 +5,7 @@ variable "name" {
 
 variable "eb_log_group_prefix" {
   type        = string
-  description = "CW logs are under /aws/elasticbeanstalk/${eb_log_group_prefix}/*, e.g. 'mentorpal-v2-mentorpal'"
+  description = "CW logs are under /aws/elasticbeanstalk/{eb_log_group_prefix}/*, e.g. 'mentorpal-v2-mentorpal'"
 }
 
 variable "api_key" {
