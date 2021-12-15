@@ -1,3 +1,8 @@
+variable "aws_region" {
+  type        = string
+  description = "AWS region"
+}
+
 variable "name" {
   type        = string
   description = "Project name, e.g. 'v2-mentorpal-new-relic'"

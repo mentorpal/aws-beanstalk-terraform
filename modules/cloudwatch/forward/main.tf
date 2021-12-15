@@ -128,7 +128,7 @@ resource "aws_iam_role" "subscription" {
     {
       "Action": "sts:AssumeRole",
       "Principal": {
-        "Service": "logs.ap-northeast-1.amazonaws.com"
+        "Service": "logs.${var.aws_region}.amazonaws.com"
       },
       "Effect": "Allow",
       "Sid": ""
@@ -152,12 +152,12 @@ resource "aws_iam_role_policy" "to_kinesis" {
   })
 }
 
-# these are created by eb but to make sure tf apply does not fail:
-resource "aws_cloudwatch_log_group" "cw_log_groups" {
-  for_each          = local.log_groups
-  name              = each.key
-  retention_in_days = 30
-}
+# these were created by eb
+# resource "aws_cloudwatch_log_group" "cw_log_groups" {
+#   for_each          = local.log_groups
+#   name              = each.key
+#   retention_in_days = 30
+# }
 
 # https://github.com/beta-yumatsud/terraform-practice/blob/6536a7f5edfd23f54cbe07da6e8a5317af5d6b76/log.tf
 resource "aws_cloudwatch_log_subscription_filter" "cw_subscriptions" {
@@ -168,5 +168,5 @@ resource "aws_cloudwatch_log_subscription_filter" "cw_subscriptions" {
   log_group_name  = each.key
   filter_pattern  = "[]"
   destination_arn = aws_kinesis_firehose_delivery_stream.logs_stream.arn
-  depends_on      = [aws_iam_role_policy.to_kinesis]
+  depends_on      = [aws_iam_role_policy.to_kinesis, aws_kinesis_firehose_delivery_stream.logs_stream]
 }
