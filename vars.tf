@@ -329,3 +329,15 @@ variable "vpc_cidr_block" {
   description = "cidr for the vpc, generally can leave the default unless there is conflict"
   default     = "172.16.0.0/16"
 }
+
+variable "enable_alarms" {
+  type        = bool
+  description = "Enable cloudwatch load balancer alarms"
+  default     = false
+}
+
+variable "alert_topic_arn" {
+  type        = string
+  description = "SNS Topic ARN that will receive alarm notifications"
+  default     = ""
+}

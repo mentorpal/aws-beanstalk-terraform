@@ -279,7 +279,34 @@ resource "aws_lb_listener_rule" "redirect_http_to_https" {
   }
 }
 
+######
+# Cloudwatch alarms
+# - https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html
+######
 
+resource "aws_cloudwatch_metric_alarm" "httpcode_5xx_count" {
+  count                     = var.enable_alarms ? 1 : 0
+  alarm_description         = "Beanstalk HTTP 5xx errors exceeded threshold (>= 1)."
+  alarm_name                = "${local.namespace}-metric-alb-httpcode-5xx-count"
+  namespace                 = "AWS/ApplicationELB"
+  metric_name               = "HTTPCode_5XX_Count"
+  comparison_operator       = "GreaterThanOrEqualToThreshold"
+  evaluation_periods        = 1
+  period                    = 300
+  statistic                 = "Sum"
+  unit                      = "Count"
+  threshold                 = 1
+  treat_missing_data        = "notBreaching"
+  actions_enabled           = true
+  alarm_actions             = ["${var.alert_topic_arn}"]
+  ok_actions                = ["${var.alert_topic_arn}"]
+  insufficient_data_actions = []
+  dimensions = {
+    LoadBalancer = module.elastic_beanstalk_environment.load_balancers[0]
+  }
+
+  # tags                      = var.tags
+}
 
 ######
 # IAM, policies, access key, etc. for CDN upload
