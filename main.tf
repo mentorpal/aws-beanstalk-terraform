@@ -313,8 +313,8 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_host_count" {
 # - 1,000 rule evaluations per second
 resource "aws_cloudwatch_metric_alarm" "consumed_lcus" {
   count                     = var.enable_alarms ? 1 : 0
-  alarm_description         = "ALB unhealthy host count (>= 1)."
-  alarm_name                = "${local.namespace}-alb-unhealthy-host-count"
+  alarm_description         = "ALB capacity units above the threshold (>= 1)."
+  alarm_name                = "${local.namespace}-alb-consumed-lcus"
   namespace                 = "AWS/ApplicationELB"
   metric_name               = "ConsumedLCUs"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -332,7 +332,6 @@ resource "aws_cloudwatch_metric_alarm" "consumed_lcus" {
     LoadBalancer = module.elastic_beanstalk_environment.load_balancers[0]
   }
 }
-
 
 resource "aws_cloudwatch_metric_alarm" "httpcode_5xx_count" {
   count                     = var.enable_alarms ? 1 : 0
@@ -406,6 +405,7 @@ resource "aws_cloudwatch_metric_alarm" "target_response_time" {
   alarm_description         = "ALB target response time."
   metric_name               = "TargetResponseTime"
   namespace                 = "AWS/ApplicationELB"
+  statistic                 = "Maximum"
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   period                    = 300
