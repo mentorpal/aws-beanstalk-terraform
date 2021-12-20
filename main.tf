@@ -326,7 +326,7 @@ resource "aws_cloudwatch_metric_alarm" "consumed_lcus" {
   unit                      = "Count"
   statistic                 = "Average"
   threshold                 = 1
-  treat_missing_data        = "breaching"
+  treat_missing_data        = "notBreaching"
   actions_enabled           = true
   alarm_actions             = ["${var.alert_topic_arn}"]
   ok_actions                = ["${var.alert_topic_arn}"]
