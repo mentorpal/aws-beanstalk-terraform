@@ -293,7 +293,7 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_host_count" {
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = 1
   period                    = 300
-  statistic                 = "Sum"
+  statistic                 = "Average"
   unit                      = "Count"
   threshold                 = 1
   treat_missing_data        = "notBreaching"
