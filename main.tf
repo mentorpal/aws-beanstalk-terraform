@@ -284,27 +284,30 @@ resource "aws_lb_listener_rule" "redirect_http_to_https" {
 # - https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html
 ######
 
-resource "aws_cloudwatch_metric_alarm" "unhealthy_host_count" {
-  count                     = var.enable_alarms ? 1 : 0
-  alarm_description         = "ALB unhealthy host count (>= 1)."
-  alarm_name                = "${local.namespace}-alb-unhealthy-host-count"
-  namespace                 = "AWS/ApplicationELB"
-  metric_name               = "UnHealthyHostCount"
-  comparison_operator       = "GreaterThanOrEqualToThreshold"
-  evaluation_periods        = 1
-  period                    = 300
-  statistic                 = "Average"
-  unit                      = "Count"
-  threshold                 = 1
-  treat_missing_data        = "notBreaching"
-  actions_enabled           = true
-  alarm_actions             = ["${var.alert_topic_arn}"]
-  ok_actions                = ["${var.alert_topic_arn}"]
-  insufficient_data_actions = []
-  dimensions = {
-    LoadBalancer = module.elastic_beanstalk_environment.load_balancers[0]
-  }
-}
+# resource "aws_cloudwatch_metric_alarm" "unhealthy_host_count" {
+#   count                     = var.enable_alarms ? 1 : 0
+#   alarm_description         = "ALB unhealthy host count (>= 1)."
+#   alarm_name                = "${local.namespace}-alb-unhealthy-host-count"
+#   namespace                 = "AWS/ApplicationELB"
+#   metric_name               = "UnHealthyHostCount"
+#   comparison_operator       = "GreaterThanOrEqualToThreshold"
+#   evaluation_periods        = 1
+#   period                    = 300
+#   statistic                 = "Average"
+#   unit                      = "Count"
+#   threshold                 = 1
+#   treat_missing_data        = "notBreaching"
+#   actions_enabled           = true
+#   alarm_actions             = ["${var.alert_topic_arn}"]
+#   ok_actions                = ["${var.alert_topic_arn}"]
+#   insufficient_data_actions = []
+#   dimensions = {
+#     # module outputs load balancer ARN, but alarm requires suffix: "arn:aws:elasticloadbalancing:<region>:<account>:loadbalancer/<suffix>"
+#     LoadBalancer = regex(".+loadbalancer/(.*)$", module.elastic_beanstalk_environment.load_balancers[0])[0]
+#     # todo get the target group arn
+#     TargetGroup = "targetgroup/awseb-AWSEB-Q4LP47X00470/5d8349dd18d224e2"
+#   }
+# }
 
 # LCU is defined on 4 dimensions and takes the highest one among them:
 # - 25 new connections per second.
@@ -323,22 +326,22 @@ resource "aws_cloudwatch_metric_alarm" "consumed_lcus" {
   unit                      = "Count"
   statistic                 = "Average"
   threshold                 = 1
-  treat_missing_data        = "notBreaching"
+  treat_missing_data        = "breaching"
   actions_enabled           = true
   alarm_actions             = ["${var.alert_topic_arn}"]
   ok_actions                = ["${var.alert_topic_arn}"]
   insufficient_data_actions = []
   dimensions = {
-    LoadBalancer = module.elastic_beanstalk_environment.load_balancers[0]
+    LoadBalancer = regex(".+loadbalancer/(.*)$", module.elastic_beanstalk_environment.load_balancers[0])[0]
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "httpcode_5xx_count" {
+resource "aws_cloudwatch_metric_alarm" "httpcode_target_5xx_count" {
   count                     = var.enable_alarms ? 1 : 0
   alarm_description         = "Beanstalk HTTP 5xx errors exceeded threshold (>= 1)."
   alarm_name                = "${local.namespace}-metric-alb-httpcode-5xx-count"
   namespace                 = "AWS/ApplicationELB"
-  metric_name               = "HTTPCode_5XX_Count"
+  metric_name               = "HTTPCode_Target_5XX_Count"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = 1
   period                    = 300
@@ -351,7 +354,7 @@ resource "aws_cloudwatch_metric_alarm" "httpcode_5xx_count" {
   ok_actions                = ["${var.alert_topic_arn}"]
   insufficient_data_actions = []
   dimensions = {
-    LoadBalancer = module.elastic_beanstalk_environment.load_balancers[0]
+    LoadBalancer = regex(".+loadbalancer/(.*)$", module.elastic_beanstalk_environment.load_balancers[0])[0]
   }
 }
 
@@ -373,28 +376,7 @@ resource "aws_cloudwatch_metric_alarm" "httpcode_elb_5xx_count" {
   ok_actions                = ["${var.alert_topic_arn}"]
   insufficient_data_actions = []
   dimensions = {
-    LoadBalancer = module.elastic_beanstalk_environment.load_balancers[0]
-  }
-}
-
-resource "aws_cloudwatch_metric_alarm" "response_time_p90" {
-  count = var.enable_alarms ? 1 : 0
-
-  alarm_name                = "${local.namespace}-alb-P90-target-response-time"
-  alarm_description         = "P90 ALB target response time (fastest response among top 10% slowest responses)."
-  metric_name               = "TargetResponseTime"
-  namespace                 = "AWS/ApplicationELB"
-  extended_statistic        = "p90"
-  comparison_operator       = "GreaterThanThreshold"
-  evaluation_periods        = 1
-  period                    = 3600
-  threshold                 = 5000
-  treat_missing_data        = "notBreaching"
-  alarm_actions             = ["${var.alert_topic_arn}"]
-  ok_actions                = []
-  insufficient_data_actions = []
-  dimensions = {
-    LoadBalancer = module.elastic_beanstalk_environment.load_balancers[0]
+    LoadBalancer = regex(".+loadbalancer/(.*)$", module.elastic_beanstalk_environment.load_balancers[0])[0]
   }
 }
 
@@ -409,16 +391,36 @@ resource "aws_cloudwatch_metric_alarm" "target_response_time" {
   comparison_operator       = "GreaterThanThreshold"
   evaluation_periods        = 1
   period                    = 300
-  threshold                 = 10000
+  threshold                 = 10 # in seconds
   treat_missing_data        = "notBreaching"
   alarm_actions             = ["${var.alert_topic_arn}"]
   ok_actions                = []
   insufficient_data_actions = []
   dimensions = {
-    LoadBalancer = module.elastic_beanstalk_environment.load_balancers[0]
+    LoadBalancer = regex(".+loadbalancer/(.*)$", module.elastic_beanstalk_environment.load_balancers[0])[0]
   }
 }
 
+resource "aws_cloudwatch_metric_alarm" "response_time_p90" {
+  count = var.enable_alarms ? 1 : 0
+
+  alarm_name                = "${local.namespace}-alb-P90-target-response-time"
+  alarm_description         = "P90 ALB target response time (fastest response among top 10% slowest responses)."
+  metric_name               = "TargetResponseTime"
+  namespace                 = "AWS/ApplicationELB"
+  extended_statistic        = "p90"
+  comparison_operator       = "GreaterThanThreshold"
+  evaluation_periods        = 1
+  period                    = 3600
+  threshold                 = 5 # in seconds
+  treat_missing_data        = "notBreaching"
+  alarm_actions             = ["${var.alert_topic_arn}"]
+  ok_actions                = []
+  insufficient_data_actions = []
+  dimensions = {
+    LoadBalancer = regex(".+loadbalancer/(.*)$", module.elastic_beanstalk_environment.load_balancers[0])[0]
+  }
+}
 
 ######
 # IAM, policies, access key, etc. for CDN upload
