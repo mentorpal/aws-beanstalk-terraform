@@ -94,6 +94,13 @@ module "cdn_static" {
   acm_certificate_arn  = data.aws_acm_certificate.cdn.arn
 }
 
+# export s3 arn so serverless can pick it up to configure iam policies
+resource "aws_ssm_parameter" "cdn_static_param" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_static_arn"
+  description = "S3 static bucket ARN"
+  type        = "SecureString"
+  value       = "${module.cdn_static.s3_bucket_arn}"
+}
 
 ###
 # the main elastic beanstalk env for this app
