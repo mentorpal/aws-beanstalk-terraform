@@ -107,3 +107,8 @@ output "efs_file_system_id" {
   description = "id for the efs file system (use to mount from beanstalk)"
   value       = module.efs.id
 }
+
+output "s3_static_bucket_arn" {
+  description = "s3 bucket that holds static assets (e.g. videos, thumbnails, ...)"
+  value       = module.cdn_static.s3_bucket_arn
+}
