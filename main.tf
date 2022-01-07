@@ -156,6 +156,7 @@ module "elastic_beanstalk_environment" {
   tier                               = "WebServer"
   version_label                      = var.eb_env_version_label
   force_destroy                      = var.eb_env_log_bucket_force_destroy
+  enable_stream_logs                 = var.eb_env_enable_stream_logs
 
   instance_type    = var.eb_env_instance_type
   root_volume_size = var.eb_env_root_volume_size
