@@ -60,6 +60,27 @@ module "transcribe_aws" {
   transcribe_namespace = local.namespace
 }
 
+resource "aws_ssm_parameter" "transcribe_access_key" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/transcribe/access_key"
+  description = "transcribe access key id"
+  type        = "SecureString"
+  value       = "${module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_ACCESS_KEY_ID}"
+}
+
+resource "aws_ssm_parameter" "transcribe_secret_key" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/transcribe/secret_key"
+  description = "transcribe secret access key"
+  type        = "SecureString"
+  value       = "${module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_SECRET_ACCESS_KEY}"
+}
+
+resource "aws_ssm_parameter" "transcribe_s3_bucket" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/transcribe/s3_bucket"
+  description = "transcribe s3 bucket source"
+  type        = "SecureString"
+  value       = "${module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_S3_BUCKET_SOURCE}"
+}
+
 locals {
   static_alias = (
     var.static_site_alias != ""
