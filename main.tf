@@ -2,6 +2,8 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "aws_caller_identity" "current" {}
+
 module "vpc" {
   source     = "git::https://github.com/cloudposse/terraform-aws-vpc.git?ref=tags/0.25.0"
   namespace  = var.eb_env_namespace
@@ -199,6 +201,7 @@ module "elastic_beanstalk_environment" {
       GOOGLE_CLIENT_ID                 = var.google_client_id,
       JWT_SECRET                       = var.secret_jwt_key,
       MONGO_URI                        = var.secret_mongo_uri,
+      STAGE                            = "v2",
       STATIC_AWS_ACCESS_KEY_ID         = aws_iam_access_key.static_upload_policy_access_key.id,
       STATIC_AWS_SECRET_ACCESS_KEY     = aws_iam_access_key.static_upload_policy_access_key.secret,
       STATIC_AWS_REGION                = var.aws_region,
@@ -489,4 +492,22 @@ resource "aws_iam_user_policy_attachment" "static_upload_policy_attachment" {
 
 resource "aws_iam_access_key" "static_upload_policy_access_key" {
   user = aws_iam_user.static_upload_user.name
+}
+
+# SSM parameter store access:
+
+data "aws_iam_policy_document" "read_parameter_store_doc" {
+  statement {
+    actions   = ["ssm:GetParameters", "ssm:GetParameter", "ssm:GetParameterHistory", "ssm:GetParametersByPath"]
+    resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.eb_env_name}/*"]
+  }
+}
+resource "aws_iam_policy" "ssm_read_access" {
+  name   = "${local.namespace}-ssm-read-policy"
+  policy = data.aws_iam_policy_document.read_parameter_store_doc.json
+}
+
+resource "aws_iam_user_policy_attachment" "ssm_access_by_user" {
+  user       = aws_iam_user.static_upload_user.name
+  policy_arn = aws_iam_policy.ssm_read_access.arn
 }
