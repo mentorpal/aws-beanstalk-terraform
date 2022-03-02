@@ -66,21 +66,21 @@ resource "aws_ssm_parameter" "transcribe_access_key" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/transcribe/access_key"
   description = "transcribe access key id"
   type        = "SecureString"
-  value       = "${module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_ACCESS_KEY_ID}"
+  value       = module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_ACCESS_KEY_ID
 }
 
 resource "aws_ssm_parameter" "transcribe_secret_key" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/transcribe/secret_key"
   description = "transcribe secret access key"
   type        = "SecureString"
-  value       = "${module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_SECRET_ACCESS_KEY}"
+  value       = module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_SECRET_ACCESS_KEY
 }
 
 resource "aws_ssm_parameter" "transcribe_s3_bucket" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/transcribe/s3_bucket"
   description = "transcribe s3 bucket source"
   type        = "SecureString"
-  value       = "${module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_S3_BUCKET_SOURCE}"
+  value       = module.transcribe_aws.transcribe_env_vars.TRANSCRIBE_AWS_S3_BUCKET_SOURCE
 }
 
 locals {
@@ -122,7 +122,7 @@ resource "aws_ssm_parameter" "cdn_static_param" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_static_arn"
   description = "S3 static bucket ARN"
   type        = "SecureString"
-  value       = "${module.cdn_static.s3_bucket_arn}"
+  value       = module.cdn_static.s3_bucket_arn
 }
 
 ###
@@ -158,7 +158,13 @@ module "elastic_beanstalk_environment" {
   tier                               = "WebServer"
   version_label                      = var.eb_env_version_label
   force_destroy                      = var.eb_env_log_bucket_force_destroy
-  enable_stream_logs                 = var.eb_env_enable_stream_logs
+
+  enable_stream_logs                   = var.eb_env_enable_stream_logs
+  logs_delete_on_terminate             = var.eb_env_logs_delete_on_terminate
+  logs_retention_in_days               = var.eb_env_logs_retention_in_days
+  health_streaming_enabled             = var.eb_env_health_streaming_enabled
+  health_streaming_delete_on_terminate = var.eb_env_health_streaming_delete_on_terminate
+  health_streaming_retention_in_days   = var.eb_env_health_streaming_retention_in_days
 
   instance_type    = var.eb_env_instance_type
   root_volume_size = var.eb_env_root_volume_size
