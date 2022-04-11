@@ -317,6 +317,27 @@ resource "aws_lb_listener_rule" "redirect_http_to_https" {
   }
 }
 
+#####
+# Firewall
+# 
+#####
+
+
+module "firewall" {
+  source           = "./modules/waf"
+  aws_region       = var.aws_region
+  environmen       = var.eb_env_stage
+  top_level_domain = var.site_domain_name
+  rate_limit       = 100
+  tags             = var.eb_env_tags
+}
+
+resource "aws_wafv2_web_acl_association" "load_blancer_firewall" {
+  resource_arn = module.elastic_beanstalk_environment.load_balancers[0]
+  web_acl_arn  = module.firewall.wafv2_webacl_arn
+}
+
+
 ######
 # Cloudwatch alarms
 # - https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html
