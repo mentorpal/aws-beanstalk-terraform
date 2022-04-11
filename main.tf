@@ -326,7 +326,7 @@ resource "aws_lb_listener_rule" "redirect_http_to_https" {
 module "firewall" {
   source           = "./modules/waf"
   aws_region       = var.aws_region
-  environmen       = var.eb_env_stage
+  environment      = var.eb_env_stage
   top_level_domain = var.site_domain_name
   rate_limit       = 100
   tags             = var.eb_env_tags
