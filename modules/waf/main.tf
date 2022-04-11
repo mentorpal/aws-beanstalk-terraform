@@ -8,61 +8,6 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
   }
 
   rule {
-    name     = "origin-header-rule"
-    priority = 1
-
-    action {
-      block {}
-    }
-
-    statement {
-      not_statement {
-        statement {
-          or_statement {
-            statement {
-              byte_match_statement {
-                search_string = var.top_level_domain
-                field_to_match {
-                  single_header {
-                    name = "origin"
-                  }
-                }
-                text_transformation {
-                  priority = 0
-                  type     = "LOWERCASE"
-                }
-                positional_constraint = "ENDS_WITH" # so that it covers subdomains
-              }
-            }
-
-            statement {
-              byte_match_statement {
-                search_string = "localhost"
-                field_to_match {
-                  single_header {
-                    name = "origin"
-                  }
-                }
-                text_transformation {
-                  priority = 0
-                  type     = "LOWERCASE"
-                }
-                positional_constraint = "CONTAINS" # so that it covers different port numbers
-              }
-            }
-          }
-        }
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = false
-      metric_name                = "origin-header-rule"
-      sampled_requests_enabled   = false
-    }
-  }
-
-  rule {
     name     = "ip-rate-limit-rule"
     priority = 2
 
