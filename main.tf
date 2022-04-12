@@ -105,6 +105,7 @@ locals {
 ###
 # the cdn that serves videos from an s3 bucket, e.g. static.mentorpal.org
 ###
+
 module "cdn_static" {
   source               = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.74.0"
   namespace            = "static-${var.eb_env_namespace}"
@@ -115,6 +116,9 @@ module "cdn_static" {
   dns_alias_enabled    = true
   parent_zone_name     = var.aws_route53_zone_name
   acm_certificate_arn  = data.aws_acm_certificate.cdn.arn
+  # bugfix: required for video playback after upload
+  forward_query_string    = true
+  query_string_cache_keys = ["v"]
 }
 
 # export s3 arn so serverless can pick it up to configure iam policies
@@ -316,6 +320,27 @@ resource "aws_lb_listener_rule" "redirect_http_to_https" {
     }
   }
 }
+
+#####
+# Firewall
+# 
+#####
+
+
+module "firewall" {
+  source           = "./modules/waf"
+  aws_region       = var.aws_region
+  environment      = var.eb_env_stage
+  top_level_domain = var.site_domain_name
+  rate_limit       = 100
+  tags             = var.eb_env_tags
+}
+
+resource "aws_wafv2_web_acl_association" "load_blancer_firewall" {
+  resource_arn = module.elastic_beanstalk_environment.load_balancers[0]
+  web_acl_arn  = module.firewall.wafv2_webacl_arn
+}
+
 
 ######
 # Cloudwatch alarms
