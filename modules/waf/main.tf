@@ -9,7 +9,7 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
 
   rule {
     name     = "ip-rate-limit-rule"
-    priority = 2
+    priority = 1
 
     action {
       block {}
@@ -30,6 +30,30 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
   }
 
   rule {
+    name     = "common-control"
+    priority = 2
+
+    override_action = "none"
+    statement {
+      managed_rule_group_statement {
+        # see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-baseline.html#aws-managed-rule-groups-baseline-crs
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+        excluded_rule {
+          # 8kb is not enough to post videos
+          name = "SizeRestrictions_BODY"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWS-Common-rule"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
     name     = "bot-control"
     priority = 3
 
@@ -40,15 +64,41 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
     }
     statement {
       managed_rule_group_statement {
-        # see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html#aws-managed-rule-groups-bot
+        # see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-bot.html
         name        = "AWSManagedRulesBotControlRuleSet"
         vendor_name = "AWS"
+
+        excluded_rule = [
+          # "CategoryMonitoring",  # tools like Pingdom
+          "CategoryHttpLibrary", # classifier/uploader calling graphql
+          "CategorySocialMedia", # slack
+          "CategorySearchEngine"
+        ]
       }
     }
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                = "AWS-AWSBotControl-rule"
+      metric_name                = "AWS-BotControl-rule"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "AWSManagedRulesLinuxRuleSet"
+    priority = 4
+    override_action {
+      none {}
+    }
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesLinuxRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+    visibility_config {
+      metric_name                = "AWS-Linux-rule"
+      cloudwatch_metrics_enabled = true
       sampled_requests_enabled   = true
     }
   }
