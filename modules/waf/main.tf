@@ -33,7 +33,9 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
     name     = "common-control"
     priority = 2
 
-    override_action = "none"
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         # see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-baseline.html#aws-managed-rule-groups-baseline-crs
@@ -68,12 +70,15 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
         name        = "AWSManagedRulesBotControlRuleSet"
         vendor_name = "AWS"
 
-        excluded_rule = [
-          # "CategoryMonitoring",  # tools like Pingdom
-          "CategoryHttpLibrary", # classifier/uploader calling graphql
-          "CategorySocialMedia", # slack
-          "CategorySearchEngine"
-        ]
+        excluded_rule {
+          name = "CategoryHttpLibrary" # classifier/uploader calling graphql
+        }
+        excluded_rule {
+          name = "CategorySocialMedia" # slack
+        }
+        excluded_rule {
+          name = "CategorySearchEngine" # google bot
+        }
       }
     }
 
