@@ -71,7 +71,10 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
         vendor_name = "AWS"
 
         excluded_rule {
-          name = "CategoryHttpLibrary" # classifier/uploader calling graphql
+          name = "CategoryHttpLibrary" # lambdas calling graphql
+        }
+        excluded_rule {
+          name = "SignalNonBrowserUserAgent" # lambdas calling graphql
         }
         excluded_rule {
           name = "CategorySocialMedia" # slack
