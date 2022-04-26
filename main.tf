@@ -211,7 +211,6 @@ module "elastic_beanstalk_environment" {
       GOOGLE_CLIENT_ID                 = var.google_client_id,
       JWT_SECRET                       = var.secret_jwt_key,
       MONGO_URI                        = var.secret_mongo_uri,
-      STAGE                            = "v2",
       STATIC_AWS_ACCESS_KEY_ID         = aws_iam_access_key.static_upload_policy_access_key.id,
       STATIC_AWS_SECRET_ACCESS_KEY     = aws_iam_access_key.static_upload_policy_access_key.secret,
       STATIC_AWS_REGION                = var.aws_region,
