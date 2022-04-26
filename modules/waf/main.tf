@@ -60,9 +60,7 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
     priority = 3
 
     override_action {
-      # in order to test, lets just collect stats before enabling rules on prod:
-      count {}
-      # none {}
+      none {}
     }
     statement {
       managed_rule_group_statement {
