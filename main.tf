@@ -229,6 +229,13 @@ module "elastic_beanstalk_environment" {
   prefer_legacy_ssm_policy     = false
 }
 
+resource "aws_ssm_parameter" "alb_url_param" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/alb_url"
+  description = "Load Balancer url"
+  type        = "String"
+  value       = module.elastic_beanstalk_environment.endpoint
+}
+
 data "aws_iam_policy_document" "minimal_s3_permissions" {
   statement {
     sid = "AllowS3OperationsOnElasticBeanstalkBuckets"
