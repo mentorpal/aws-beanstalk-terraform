@@ -1,6 +1,6 @@
 resource "aws_wafv2_web_acl" "wafv2_webacl" {
   name  = "mentorpal-${var.environment}-wafv2-webacl"
-  scope = "REGIONAL"
+  scope = "CLOUDFRONT"
   tags  = var.tags
 
   default_action {
@@ -113,14 +113,6 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
     metric_name                = "mentorpal-${var.environment}-wafv2-webacl"
     sampled_requests_enabled   = true
   }
-}
-
-resource "aws_ssm_parameter" "origin_acl_arn" {
-  name  = "/mentorpal/${var.environment}/firewall/WEBACL_ARN"
-  type  = "String"
-  value = aws_wafv2_web_acl.wafv2_webacl.arn
-
-  tags = var.tags
 }
 
 resource "aws_s3_bucket" "s3_logs" {
