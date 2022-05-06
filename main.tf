@@ -2,7 +2,40 @@ provider "aws" {
   region = var.aws_region
 }
 
+# to work with CLOUDFRONT firewall region must be us-east-1
+provider "aws" {
+  region = "us-east-1"
+  alias  = "us-east-1"
+}
+
 data "aws_caller_identity" "current" {}
+
+data "aws_elastic_beanstalk_hosted_zone" "current" {}
+
+data "aws_elastic_beanstalk_solution_stack" "multi_docker" {
+  most_recent = true
+  name_regex  = "^64bit Amazon Linux (.*) Multi-container Docker (.*)$"
+}
+
+###
+# Find a certificate for our domain that has status ISSUED
+# NOTE that for now, this infra depends on managing certs INSIDE AWS/ACM
+###
+data "aws_acm_certificate" "localregion" {
+  domain   = var.aws_acm_certificate_domain
+  statuses = ["ISSUED"]
+}
+
+data "aws_acm_certificate" "cdn" {
+  provider = aws.us-east-1
+  domain   = var.aws_acm_certificate_domain
+  statuses = ["ISSUED"]
+}
+
+locals {
+  namespace = "${var.eb_env_namespace}-${var.eb_env_stage}-${var.eb_env_name}"
+  alb_url   = "eb-${var.aws_region}-${var.eb_env_stage}.${var.aws_acm_certificate_domain}"
+}
 
 module "vpc" {
   source     = "git::https://github.com/cloudposse/terraform-aws-vpc.git?ref=tags/0.25.0"
@@ -40,17 +73,6 @@ module "elastic_beanstalk_application" {
   tags        = var.eb_env_tags
   delimiter   = var.eb_env_delimiter
   description = var.eb_env_description
-}
-
-data "aws_elastic_beanstalk_hosted_zone" "current" {}
-
-data "aws_elastic_beanstalk_solution_stack" "multi_docker" {
-  most_recent = true
-  name_regex  = "^64bit Amazon Linux (.*) Multi-container Docker (.*)$"
-}
-
-locals {
-  namespace = "${var.eb_env_namespace}-${var.eb_env_stage}-${var.eb_env_name}"
 }
 
 ###
@@ -129,39 +151,32 @@ resource "aws_ssm_parameter" "cdn_static_param" {
   value       = module.cdn_static.s3_bucket_arn
 }
 
+
 ###
 # the main elastic beanstalk env for this app
 ###
 module "elastic_beanstalk_environment" {
-  source                     = "git::https://github.com/cloudposse/terraform-aws-elastic-beanstalk-environment.git?ref=tags/0.40.0"
-  namespace                  = var.eb_env_namespace
-  stage                      = var.eb_env_stage
-  name                       = var.eb_env_name
-  attributes                 = var.eb_env_attributes
-  tags                       = var.eb_env_tags
-  delimiter                  = var.eb_env_delimiter
-  description                = var.eb_env_description
-  region                     = var.aws_region
-  availability_zone_selector = var.eb_env_availability_zone_selector
-  # NOTE: We would prefer for the DNS name 
-  # of module.elastic_beanstalk_environment
-  # to be staticly set via inputs,
-  # but have been running into other/different problems
-  # trying to get that to work 
-  # (for one thing, permissions error anytime try to set
-  # elastic_beanstalk_environment.dns_zone_id)
-  # dns_zone_id                = data.aws_elastic_beanstalk_hosted_zone.current.id
-  # dns_zone_id                = var.dns_zone_id
+  source                             = "git::https://github.com/cloudposse/terraform-aws-elastic-beanstalk-environment.git?ref=tags/0.40.0"
+  namespace                          = var.eb_env_namespace
+  stage                              = var.eb_env_stage
+  name                               = var.eb_env_name
+  attributes                         = var.eb_env_attributes
+  tags                               = var.eb_env_tags
+  delimiter                          = var.eb_env_delimiter
+  description                        = var.eb_env_description
+  region                             = var.aws_region
+  availability_zone_selector         = var.eb_env_availability_zone_selector
   wait_for_ready_timeout             = var.eb_env_wait_for_ready_timeout
   elastic_beanstalk_application_name = module.elastic_beanstalk_application.elastic_beanstalk_application_name
   environment_type                   = var.eb_env_environment_type
   loadbalancer_type                  = var.eb_env_loadbalancer_type
-  loadbalancer_certificate_arn       = data.aws_acm_certificate.localregion.arn
   loadbalancer_ssl_policy            = var.eb_env_loadbalancer_ssl_policy
-  elb_scheme                         = var.eb_env_elb_scheme
-  tier                               = "WebServer"
-  version_label                      = var.eb_env_version_label
-  force_destroy                      = var.eb_env_log_bucket_force_destroy
+  loadbalancer_certificate_arn       = data.aws_acm_certificate.localregion.arn
+
+  elb_scheme    = var.eb_env_elb_scheme
+  tier          = "WebServer"
+  version_label = var.eb_env_version_label
+  force_destroy = var.eb_env_log_bucket_force_destroy
 
   enable_stream_logs                   = var.eb_env_enable_stream_logs
   logs_delete_on_terminate             = var.eb_env_logs_delete_on_terminate
@@ -211,7 +226,6 @@ module "elastic_beanstalk_environment" {
       GOOGLE_CLIENT_ID                 = var.google_client_id,
       JWT_SECRET                       = var.secret_jwt_key,
       MONGO_URI                        = var.secret_mongo_uri,
-      STAGE                            = "v2",
       STATIC_AWS_ACCESS_KEY_ID         = aws_iam_access_key.static_upload_policy_access_key.id,
       STATIC_AWS_SECRET_ACCESS_KEY     = aws_iam_access_key.static_upload_policy_access_key.secret,
       STATIC_AWS_REGION                = var.aws_region,
@@ -229,36 +243,6 @@ module "elastic_beanstalk_environment" {
   prefer_legacy_ssm_policy     = false
 }
 
-data "aws_iam_policy_document" "minimal_s3_permissions" {
-  statement {
-    sid = "AllowS3OperationsOnElasticBeanstalkBuckets"
-    actions = [
-      "s3:ListAllMyBuckets",
-      "s3:GetBucketLocation"
-    ]
-    resources = ["*"]
-  }
-}
-
-provider "aws" {
-  region = "us-east-1"
-  alias  = "us-east-1"
-}
-
-###
-# Find a certificate for our domain that has status ISSUED
-# NOTE that for now, this infra depends on managing certs INSIDE AWS/ACM
-###
-data "aws_acm_certificate" "localregion" {
-  domain   = var.aws_acm_certificate_domain
-  statuses = ["ISSUED"]
-}
-
-data "aws_acm_certificate" "cdn" {
-  provider = aws.us-east-1
-  domain   = var.aws_acm_certificate_domain
-  statuses = ["ISSUED"]
-}
 
 data "aws_route53_zone" "main" {
   name = var.aws_route53_zone_name
@@ -267,13 +251,122 @@ data "aws_route53_zone" "main" {
 # create dns record of type "A"
 resource "aws_route53_record" "site_domain_name" {
   zone_id         = data.aws_route53_zone.main.zone_id
-  name            = var.site_domain_name
+  name            = local.alb_url
   type            = "A"
   allow_overwrite = true
   alias {
     name                   = module.elastic_beanstalk_environment.endpoint
     zone_id                = data.aws_elastic_beanstalk_hosted_zone.current.id
     evaluate_target_health = true
+  }
+}
+
+resource "aws_ssm_parameter" "alb_url_param" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/alb_url"
+  description = "Load Balancer url"
+  type        = "String"
+  # value       = module.elastic_beanstalk_environment.endpoint
+  value = local.alb_url
+}
+
+
+
+#####
+# Firewall
+# 
+#####
+
+module "firewall" {
+  source           = "./modules/waf"
+  aws_region       = var.aws_region
+  environment      = var.eb_env_stage
+  top_level_domain = var.site_domain_name
+  rate_limit       = 1000
+  tags             = var.eb_env_tags
+}
+
+######
+# CloudFront distro in front of Beanstalk
+#
+
+# the default policy does not include query strings as cache keys
+resource "aws_cloudfront_cache_policy" "cdn_beanstalk_cache" {
+  name        = "${local.namespace}-cdn-cache-policy"
+  default_ttl = 300 # 5min
+  min_ttl     = 0
+  max_ttl     = 86400 # 1 day
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+    headers_config {
+      header_behavior = "none"
+    }
+    query_strings_config {
+      query_string_behavior = "all"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_request_policy" "cdn_beanstalk_origin_policy" {
+  name = "${local.namespace}-cdn-origin-policy"
+
+  cookies_config {
+    cookie_behavior = "all"
+  }
+  headers_config {
+    header_behavior = "allViewer"
+  }
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+}
+
+module "cdn_beanstalk" {
+  source               = "git::https://github.com/cloudposse/terraform-aws-cloudfront-cdn.git?ref=tags/0.24.1"
+  acm_certificate_arn  = data.aws_acm_certificate.localregion.arn
+  aliases              = [var.site_domain_name]
+  allowed_methods      = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+  cache_policy_id      = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+  compress             = true
+  cached_methods       = ["GET", "HEAD"]
+  forward_query_string = true
+  forward_cookies      = "none"
+  is_ipv6_enabled      = true
+  # logging config, disable because we have from the service itself
+  logging_enabled                 = false
+  log_expiration_days             = 30
+  name                            = var.eb_env_name
+  namespace                       = var.eb_env_namespace
+  environment                     = var.aws_region
+  # origin_domain_name              = module.elastic_beanstalk_environment.endpoint
+  origin_domain_name              = local.alb_url
+  origin_protocol_policy          = "https-only"
+  origin_request_policy_id        = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_origin_policy.id
+  origin_ssl_protocols            = ["TLSv1.2"]
+  parent_zone_name                = var.aws_route53_zone_name
+  price_class                     = "PriceClass_All"
+  stage                           = var.eb_env_stage
+  viewer_protocol_policy          = "https-only"
+  viewer_minimum_protocol_version = "TLSv1.2_2019"
+  web_acl_id                      = module.firewall.wafv2_webacl_arn
+}
+
+
+data "aws_lb_listener" "http_listener" {
+  load_balancer_arn = module.elastic_beanstalk_environment.load_balancers[0]
+  port              = 80
+}
+
+data "aws_iam_policy_document" "minimal_s3_permissions" {
+  statement {
+    sid = "AllowS3OperationsOnElasticBeanstalkBuckets"
+    actions = [
+      "s3:ListAllMyBuckets",
+      "s3:GetBucketLocation"
+    ]
+    resources = ["*"]
   }
 }
 
@@ -296,51 +389,6 @@ module "efs" {
     module.elastic_beanstalk_environment.security_group_id
   ]
 }
-
-# find the HTTP load-balancer listener, so we can redirect to HTTPS
-data "aws_lb_listener" "http_listener" {
-  load_balancer_arn = module.elastic_beanstalk_environment.load_balancers[0]
-  port              = 80
-}
-
-# set the HTTP -> HTTPS redirect rule for any request matching site domain
-resource "aws_lb_listener_rule" "redirect_http_to_https" {
-  listener_arn = data.aws_lb_listener.http_listener.arn
-  action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-  condition {
-    host_header {
-      values = [var.site_domain_name]
-    }
-  }
-}
-
-#####
-# Firewall
-# 
-#####
-
-
-module "firewall" {
-  source           = "./modules/waf"
-  aws_region       = var.aws_region
-  environment      = var.eb_env_stage
-  top_level_domain = var.site_domain_name
-  rate_limit       = 100
-  tags             = var.eb_env_tags
-}
-
-resource "aws_wafv2_web_acl_association" "load_blancer_firewall" {
-  resource_arn = module.elastic_beanstalk_environment.load_balancers[0]
-  web_acl_arn  = module.firewall.wafv2_webacl_arn
-}
-
 
 ######
 # Cloudwatch alarms

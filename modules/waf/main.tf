@@ -1,6 +1,6 @@
 resource "aws_wafv2_web_acl" "wafv2_webacl" {
   name  = "mentorpal-${var.environment}-wafv2-webacl"
-  scope = "REGIONAL"
+  scope = "CLOUDFRONT"
   tags  = var.tags
 
   default_action {
@@ -9,7 +9,7 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
 
   rule {
     name     = "ip-rate-limit-rule"
-    priority = 2
+    priority = 1
 
     action {
       block {}
@@ -30,25 +30,75 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
   }
 
   rule {
-    name     = "bot-control"
-    priority = 3
+    name     = "common-control"
+    priority = 2
 
     override_action {
-      # in order to test, lets just collect stats before enabling rules on prod:
-      count {}
-      # none {}
+      none {}
     }
     statement {
       managed_rule_group_statement {
-        # see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html#aws-managed-rule-groups-bot
-        name        = "AWSManagedRulesBotControlRuleSet"
+        # see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-baseline.html#aws-managed-rule-groups-baseline-crs
+        name        = "AWSManagedRulesCommonRuleSet"
         vendor_name = "AWS"
+        excluded_rule {
+          # 8kb is not enough to post videos
+          name = "SizeRestrictions_BODY"
+        }
       }
     }
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                = "AWS-AWSBotControl-rule"
+      metric_name                = "AWS-Common-rule"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "bot-control"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+    statement {
+      managed_rule_group_statement {
+        # see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-bot.html
+        name        = "AWSManagedRulesBotControlRuleSet"
+        vendor_name = "AWS"
+        
+        excluded_rule {
+          name = "CategorySocialMedia" # slack
+        }
+        excluded_rule {
+          name = "CategorySearchEngine" # google bot
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWS-BotControl-rule"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "AWSManagedRulesLinuxRuleSet"
+    priority = 4
+    override_action {
+      none {}
+    }
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesLinuxRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+    visibility_config {
+      metric_name                = "AWS-Linux-rule"
+      cloudwatch_metrics_enabled = true
       sampled_requests_enabled   = true
     }
   }
@@ -58,14 +108,6 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
     metric_name                = "mentorpal-${var.environment}-wafv2-webacl"
     sampled_requests_enabled   = true
   }
-}
-
-resource "aws_ssm_parameter" "origin_acl_arn" {
-  name  = "/mentorpal/${var.environment}/firewall/WEBACL_ARN"
-  type  = "String"
-  value = aws_wafv2_web_acl.wafv2_webacl.arn
-
-  tags = var.tags
 }
 
 resource "aws_s3_bucket" "s3_logs" {
