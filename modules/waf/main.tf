@@ -45,6 +45,10 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
           # 8kb is not enough to post videos
           name = "SizeRestrictions_BODY"
         }
+        excluded_rule {
+          # flags legit thumbnail upload attemts
+          name = "CrossSiteScripting_BODY"
+        }
       }
     }
 
