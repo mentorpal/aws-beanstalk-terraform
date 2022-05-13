@@ -329,7 +329,7 @@ resource "aws_cloudfront_function" "cf_fn_origin_root" {
   runtime = "cloudfront-js-1.0"
   comment = "Rewrites root s3 bucket requests to index.html for all apps (home, chat, admin)"
   publish = true
-  code    = file("scripts/mentorpal-rewrite-default-index-s3-origin.js")
+  code    = file("${path.module}/scripts/mentorpal-rewrite-default-index-s3-origin.js")
 }
 
 module "cdn_beanstalk" {
