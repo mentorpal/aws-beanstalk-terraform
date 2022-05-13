@@ -270,7 +270,6 @@ resource "aws_ssm_parameter" "alb_url_param" {
 }
 
 
-
 #####
 # Firewall
 # 
@@ -280,7 +279,6 @@ module "firewall" {
   source           = "./modules/waf"
   aws_region       = var.aws_region
   environment      = var.eb_env_stage
-  top_level_domain = var.site_domain_name
   rate_limit       = 1000
   tags             = var.eb_env_tags
 }
