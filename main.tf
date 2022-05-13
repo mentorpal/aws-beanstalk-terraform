@@ -392,7 +392,7 @@ module "cdn_beanstalk" {
       #  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
       #   function_association = {
       #     event_type   = "origin-request"
-      #     function_arn = aws_cloudfront_function.cf_fn_origin_root.qualified_arn
+      #     function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
       #   }
     },
     {
@@ -409,7 +409,7 @@ module "cdn_beanstalk" {
       #  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
       #   function_association = {
       #     event_type   = "origin-request"
-      #     function_arn = aws_cloudfront_function.cf_fn_origin_root.qualified_arn
+      #     function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
       #   }
     },
     {
@@ -425,7 +425,7 @@ module "cdn_beanstalk" {
       # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
       function_association = {
         event_type   = "origin-request"
-        function_arn = aws_cloudfront_function.cf_fn_origin_root.qualified_arn
+        function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
       }
     },
     {
@@ -433,7 +433,6 @@ module "cdn_beanstalk" {
       path_pattern     = "*"                # send everything else to beanstalk
       forward_cookies  = "all"
       cache_policy_id  = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
-
     },
   ]
 
