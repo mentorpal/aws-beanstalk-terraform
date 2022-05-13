@@ -35,7 +35,7 @@ data "aws_acm_certificate" "cdn" {
 locals {
   namespace    = "${var.eb_env_namespace}-${var.eb_env_stage}-${var.eb_env_name}"
   alb_url      = "eb-${var.aws_region}-${var.eb_env_stage}.${var.aws_acm_certificate_domain}"
-  eb_origin_id = "${var.eb_env_name}-${var.aws_region}-${eb_env_stage}-beanstalk"
+  eb_origin_id = "${var.eb_env_name}-${var.aws_region}-${var.eb_env_stage}-beanstalk"
 }
 
 module "vpc" {
