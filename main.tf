@@ -427,7 +427,7 @@ module "cdn_beanstalk" {
       # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
       function_association = {
         event_type   = "origin-request"
-        lambda_arn   = aws_lambda_function.cf_fn_origin_root.qualified_arn
+        lambda_arn   = aws_cloudfront_function.cf_fn_origin_root.qualified_arn
         include_body = false
       }
     },
