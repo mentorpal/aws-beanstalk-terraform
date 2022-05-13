@@ -371,7 +371,7 @@ module "cdn_beanstalk" {
   # from the docs: "Amazon S3 returns this index document when requests are made to the root domain or any of the subfolders"
   # if this is the case then aws_lambda_function.cf_fn_origin_root is not required
   index_document      = "index.html"
-  is_ipv6_enabled     = true
+  ipv6_enabled        = true
   log_expiration_days = 30
   name                = var.eb_env_name
   namespace           = var.eb_env_namespace
