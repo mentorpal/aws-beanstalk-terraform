@@ -333,9 +333,10 @@ resource "aws_cloudfront_function" "cf_fn_origin_root" {
 }
 
 module "cdn_beanstalk" {
-  source                             = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
-  acm_certificate_arn                = data.aws_acm_certificate.localregion.arn
-  additional_bucket_policy           = {} # TODO perhaps will need to set in order to get cicd to update contents
+  source              = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
+  acm_certificate_arn = data.aws_acm_certificate.localregion.arn
+  # TODO perhaps will need to set in order to get cicd to update contents
+  # additional_bucket_policy           = {} 
   aliases                            = [var.site_domain_name]
   allowed_methods                    = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
   block_origin_public_access_enabled = true # so only CDN can access it
@@ -447,9 +448,9 @@ module "cdn_beanstalk" {
   price_class = "PriceClass_100"
   stage       = var.eb_env_stage
   # this are artifacts generated from github code, no need to version them:
-  versioning_enabled              = false
-  viewer_protocol_policy          = "redirect-to-https"
-  web_acl_id                      = module.firewall.wafv2_webacl_arn
+  versioning_enabled     = false
+  viewer_protocol_policy = "redirect-to-https"
+  web_acl_id             = module.firewall.wafv2_webacl_arn
 }
 
 # export to SSM so cicd can be configured for deployment
