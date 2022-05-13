@@ -449,7 +449,6 @@ module "cdn_beanstalk" {
   # this are artifacts generated from github code, no need to version them:
   versioning_enabled              = false
   viewer_protocol_policy          = "redirect-to-https"
-  viewer_minimum_protocol_version = "TLSv1.2_2019"
   web_acl_id                      = module.firewall.wafv2_webacl_arn
 }
 
