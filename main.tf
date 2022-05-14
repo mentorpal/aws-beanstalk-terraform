@@ -348,15 +348,21 @@ module "cdn_beanstalk" {
   # second origin - beanstalk instance:
   custom_origins = [
     {
-      domain_name = local.alb_url
-      origin_id   = local.eb_origin_id
-      # origin_path = ""
+      domain_name    = local.alb_url
+      custom_headers = []
+      origin_id      = local.eb_origin_id
+      origin_path    = ""
       custom_origin_config = {
+        http_port                = 80
+        https_port               = 443
+        origin_protocol_policy   = "https-only"
+        origin_ssl_protocols     = ["TLSv1", "TLSv1.1", "TLSv1.2"]
+        origin_keepalive_timeout = 5
+        origin_read_timeout      = 30
 
-        origin_protocol_policy = "https-only"
         # not mentioned in the docs, is in terraform-aws-cloudfront-cdn module:
         origin_request_policy_id = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_origin_policy.id
-        origin_ssl_protocols     = ["TLSv1.2"]
+
       }
     }
   ]
@@ -379,60 +385,113 @@ module "cdn_beanstalk" {
 
   ordered_cache = [
     {
-      target_origin_id       = "" # default s3 bucket
-      path_pattern           = "/home*"
-      viewer_protocol_policy = "redirect-to-https"
-      min_ttl                = 0
-      default_ttl            = 2592000  # 1 month
-      max_ttl                = 31536000 # 1yr
-      forward_query_string   = false
-      forward_cookies        = "none"
+      target_origin_id                  = "" # default s3 bucket
+      path_pattern                      = "/home*"
+      viewer_protocol_policy            = "redirect-to-https"
+      min_ttl                           = 0
+      default_ttl                       = 2592000  # 1 month
+      max_ttl                           = 31536000 # 1yr
+      forward_query_string              = false
+      forward_cookies                   = "none"
+      forward_cookies_whitelisted_names = []
 
-      # lets test first with index_document
-      #  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
-      #   function_association = {
-      #     event_type   = "origin-request"
-      #     function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
-      #   }
-    },
-    {
-      target_origin_id       = "" # default s3 bucket
-      path_pattern           = "/chat*"
-      viewer_protocol_policy = "redirect-to-https"
-      min_ttl                = 0
-      default_ttl            = 2592000  # 1 month
-      max_ttl                = 31536000 # 1yr
-      forward_query_string   = false
-      forward_cookies        = "none"
-
-      # lets test first with index_document
-      #  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
-      #   function_association = {
-      #     event_type   = "origin-request"
-      #     function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
-      #   }
-    },
-    {
-      target_origin_id       = "" # default s3 bucket
-      path_pattern           = "/admin*"
-      viewer_protocol_policy = "redirect-to-https"
-      min_ttl                = 0
-      default_ttl            = 2592000  # 1 month
-      max_ttl                = 31536000 # 1yr
-      forward_query_string   = false
-      forward_cookies        = "none"
-
+      viewer_protocol_policy      = "redirect-to-https"
+      cached_methods              = ["GET", "HEAD"]
+      allowed_methods             = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+      compress                    = true
+      forward_header_values       = []
+      forward_query_string        = false
+      cache_policy_id             = ""
+      origin_request_policy_id    = ""
+      lambda_function_association = []
+      trusted_signers             = []
+      trusted_key_groups          = []
+      response_headers_policy_id  = ""
       # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
-      function_association = {
+      function_association = [{
         event_type   = "origin-request"
         function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
-      }
+      }]
     },
     {
-      target_origin_id = local.eb_origin_id # check this
-      path_pattern     = "*"                # send everything else to beanstalk
-      forward_cookies  = "all"
-      cache_policy_id  = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+      target_origin_id                  = "" # default s3 bucket
+      path_pattern                      = "/chat*"
+      viewer_protocol_policy            = "redirect-to-https"
+      min_ttl                           = 0
+      default_ttl                       = 2592000  # 1 month
+      max_ttl                           = 31536000 # 1yr
+      forward_query_string              = false
+      forward_cookies                   = "none"
+      forward_cookies_whitelisted_names = []
+      viewer_protocol_policy            = "redirect-to-https"
+      cached_methods                    = ["GET", "HEAD"]
+      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+      compress                          = true
+      forward_header_values             = []
+      forward_query_string              = false
+      cache_policy_id                   = ""
+      origin_request_policy_id          = ""
+      lambda_function_association       = []
+      trusted_signers                   = []
+      trusted_key_groups                = []
+      response_headers_policy_id        = ""
+      function_association              = []
+      # lets test first with index_document
+      #  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
+      #   function_association = {
+      #     event_type   = "origin-request"
+      #     function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
+      #   }
+    },
+    {
+      target_origin_id                  = "" # default s3 bucket
+      path_pattern                      = "/admin*"
+      viewer_protocol_policy            = "redirect-to-https"
+      min_ttl                           = 0
+      default_ttl                       = 2592000  # 1 month
+      max_ttl                           = 31536000 # 1yr
+      forward_query_string              = false
+      forward_cookies                   = "none"
+      forward_cookies_whitelisted_names = []
+      viewer_protocol_policy            = "redirect-to-https"
+      cached_methods                    = ["GET", "HEAD"]
+      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+      compress                          = true
+      forward_header_values             = []
+      forward_query_string              = false
+      cache_policy_id                   = ""
+      origin_request_policy_id          = ""
+      lambda_function_association       = []
+      trusted_signers                   = []
+      trusted_key_groups                = []
+      response_headers_policy_id        = ""
+      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
+      function_association = [{
+        event_type   = "origin-request"
+        function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
+      }]
+    },
+    {
+      target_origin_id                  = local.eb_origin_id # check this
+      path_pattern                      = "*"                # send everything else to beanstalk
+      forward_cookies                   = "all"
+      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+      min_ttl                           = 0
+      default_ttl                       = 5
+      max_ttl                           = 30
+      forward_query_string              = true
+      forward_header_values             = ["*"]
+      forward_cookies_whitelisted_names = ["*"]
+      viewer_protocol_policy            = "redirect-to-https"
+      cached_methods                    = ["GET", "HEAD"]
+      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+      compress                          = true
+      origin_request_policy_id          = ""
+      function_association              = []
+      lambda_function_association       = []
+      trusted_signers                   = []
+      trusted_key_groups                = []
+      response_headers_policy_id        = ""
     },
   ]
 
