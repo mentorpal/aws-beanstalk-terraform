@@ -337,7 +337,7 @@ resource "aws_cloudfront_cache_policy" "cdn_s3_cache" {
       header_behavior = "none"
     }
     query_strings_config {
-      query_string_behavior = "none"
+      query_string_behavior = "all"
     }
   }
 }
@@ -346,10 +346,10 @@ resource "aws_cloudfront_origin_request_policy" "cdn_s3_request" {
   name = "${local.namespace}-cdn-s3-origin-request-policy"
 
   cookies_config {
-    cookie_behavior = "all"
+    cookie_behavior = "none"
   }
   headers_config {
-    header_behavior = "allViewer"
+    header_behavior = "none"
   }
   query_strings_config {
     query_string_behavior = "all"
