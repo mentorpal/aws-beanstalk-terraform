@@ -366,16 +366,40 @@ resource "aws_cloudfront_function" "cf_fn_origin_root" {
   code    = file("${path.module}/scripts/mentorpal-rewrite-default-index-s3-origin.js")
 }
 
+locals {
+  beanstalk_cache = {
+    target_origin_id                  = local.eb_origin_id
+    path_pattern                      = "/graphql*"
+    forward_cookies                   = "all"
+    cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+    origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_request.id
+    min_ttl                           = 0
+    default_ttl                       = 5
+    max_ttl                           = 30
+    forward_query_string              = true
+    forward_header_values             = ["*"]
+    forward_cookies_whitelisted_names = ["*"]
+    viewer_protocol_policy            = "redirect-to-https"
+    cached_methods                    = ["GET", "HEAD"]
+    allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+    compress                          = true
+    function_association              = []
+    lambda_function_association       = []
+    trusted_signers                   = []
+    trusted_key_groups                = []
+    response_headers_policy_id        = ""
+  }
+}
+
 module "cdn_beanstalk" {
-  source              = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
-  acm_certificate_arn = data.aws_acm_certificate.localregion.arn
-  # TODO perhaps will need to set in order to get cicd to update contents
-  # additional_bucket_policy           = {} 
+  source                             = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
+  acm_certificate_arn                = data.aws_acm_certificate.localregion.arn
   aliases                            = [var.site_domain_name]
   allowed_methods                    = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
   block_origin_public_access_enabled = true # so only CDN can access it
   # having a default cache policy made the apply fail:
-  # cache_policy_id                    = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+  # cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
+  # origin_request_policy_id          = resource.aws_cloudfront_cache_policy.cdn_s3_request.id
   cached_methods                    = ["GET", "HEAD"]
   cloudfront_access_logging_enabled = false
   compress                          = true
@@ -419,9 +443,12 @@ module "cdn_beanstalk" {
   namespace           = var.eb_env_namespace
 
   ordered_cache = [
+    merge(local.beanstalk_cache, { path_pattern = "/graphql*" }),
+    merge(local.beanstalk_cache, { path_pattern = "/classifier*" }),
+    merge(local.beanstalk_cache, { path_pattern = "/upload*" }),
     {
       target_origin_id                  = "" # default s3 bucket
-      path_pattern                      = "/home*"
+      path_pattern                      = "*"
       viewer_protocol_policy            = "redirect-to-https"
       min_ttl                           = 0
       default_ttl                       = 2592000  # 1 month
@@ -447,85 +474,6 @@ module "cdn_beanstalk" {
         event_type   = "viewer-request"
         function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
       }]
-    },
-    {
-      target_origin_id                  = "" # default s3 bucket
-      path_pattern                      = "/chat*"
-      viewer_protocol_policy            = "redirect-to-https"
-      min_ttl                           = 0
-      default_ttl                       = 2592000  # 1 month
-      max_ttl                           = 31536000 # 1yr
-      forward_query_string              = false
-      forward_cookies                   = "none"
-      forward_cookies_whitelisted_names = []
-      viewer_protocol_policy            = "redirect-to-https"
-      cached_methods                    = ["GET", "HEAD"]
-      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
-      compress                          = true
-      forward_header_values             = []
-      forward_query_string              = false
-      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
-      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_s3_request.id
-      lambda_function_association       = []
-      trusted_signers                   = []
-      trusted_key_groups                = []
-      response_headers_policy_id        = ""
-      function_association              = []
-      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
-      function_association = [{
-        event_type   = "viewer-request"
-        function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
-      }]
-    },
-    {
-      target_origin_id                  = "" # default s3 bucket
-      path_pattern                      = "/admin*"
-      viewer_protocol_policy            = "redirect-to-https"
-      min_ttl                           = 0
-      default_ttl                       = 2592000  # 1 month
-      max_ttl                           = 31536000 # 1yr
-      forward_query_string              = false
-      forward_cookies                   = "none"
-      forward_cookies_whitelisted_names = []
-      viewer_protocol_policy            = "redirect-to-https"
-      cached_methods                    = ["GET", "HEAD"]
-      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
-      compress                          = true
-      forward_header_values             = []
-      forward_query_string              = false
-      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
-      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_s3_request.id
-      lambda_function_association       = []
-      trusted_signers                   = []
-      trusted_key_groups                = []
-      response_headers_policy_id        = ""
-      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
-      function_association = [{
-        event_type   = "viewer-request"
-        function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
-      }]
-    },
-    {
-      target_origin_id                  = local.eb_origin_id # check this
-      path_pattern                      = "*"                # send everything else to beanstalk
-      forward_cookies                   = "all"
-      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
-      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_request.id
-      min_ttl                           = 0
-      default_ttl                       = 5
-      max_ttl                           = 30
-      forward_query_string              = true
-      forward_header_values             = ["*"]
-      forward_cookies_whitelisted_names = ["*"]
-      viewer_protocol_policy            = "redirect-to-https"
-      cached_methods                    = ["GET", "HEAD"]
-      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
-      compress                          = true
-      function_association              = []
-      lambda_function_association       = []
-      trusted_signers                   = []
-      trusted_key_groups                = []
-      response_headers_policy_id        = ""
     }
   ]
 

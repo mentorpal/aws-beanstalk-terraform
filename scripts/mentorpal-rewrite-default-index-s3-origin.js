@@ -12,6 +12,16 @@ function handler(event) {
     return request;
   }
 
+  if (uri == "" || uri == "/") {
+    var response = {
+      statusCode: 302,
+      statusDescription: "Found",
+      headers: { location: { value: "/home/" } },
+    };
+
+    return response;
+  }
+
   if (uri == "/home" || uri == "/home/") {
     request.uri = "/home/index.html";
   }
