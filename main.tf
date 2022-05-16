@@ -367,6 +367,7 @@ module "cdn_beanstalk" {
     }
   ]
   default_root_object = "/home/index.html"
+  dns_alias_enabled   = true
   environment         = var.aws_region
 
   # TODO cicd pipeline
@@ -514,13 +515,6 @@ resource "aws_ssm_parameter" "cdn_id" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/CLOUDFRONT_DISTRIBUTION_ID"
   type        = "String"
   value       = module.cdn_beanstalk.cf_id
-}
-
-resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
-  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3-websites/ARN"
-  description = "Bucket that stores frontend apps"
-  type        = "String"
-  value       = module.cdn_beanstalk.s3_bucket_arn
 }
 
 resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
