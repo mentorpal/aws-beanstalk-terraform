@@ -408,9 +408,9 @@ module "cdn_beanstalk" {
       trusted_signers             = []
       trusted_key_groups          = []
       response_headers_policy_id  = ""
-      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
       function_association = [{
-        event_type   = "origin-request"
+        # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
+        event_type   = "viewer-request"
         function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
       }]
     },
@@ -438,9 +438,9 @@ module "cdn_beanstalk" {
       response_headers_policy_id        = ""
       function_association              = []
       # lets test first with index_document
-      #  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
+      #  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
       #   function_association = {
-      #     event_type   = "origin-request"
+      #     event_type   = "viewer-request"
       #     function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
       #   }
     },
@@ -466,9 +466,9 @@ module "cdn_beanstalk" {
       trusted_signers                   = []
       trusted_key_groups                = []
       response_headers_policy_id        = ""
-      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#lambda-function-association
+      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
       function_association = [{
-        event_type   = "origin-request"
+        event_type   = "viewer-request"
         function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
       }]
     },
