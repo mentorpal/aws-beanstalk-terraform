@@ -557,6 +557,13 @@ resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
   value       = module.cdn_beanstalk.s3_bucket_arn
 }
 
+resource "aws_ssm_parameter" "cdn_s3_websites_name" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3-websites/NAME"
+  description = "Bucket that stores frontend apps"
+  type        = "String"
+  value       = module.cdn_beanstalk.s3_bucket
+}
+
 data "aws_lb_listener" "http_listener" {
   load_balancer_arn = module.elastic_beanstalk_environment.load_balancers[0]
   port              = 80
