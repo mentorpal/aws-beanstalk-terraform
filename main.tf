@@ -290,7 +290,7 @@ module "firewall" {
 
 # the default policy does not include query strings as cache keys
 resource "aws_cloudfront_cache_policy" "cdn_beanstalk_cache" {
-  name        = "${local.namespace}-cdn-cache-policy"
+  name        = "${local.namespace}-cdn-eb-cache-policy"
   default_ttl = 300 # 5min
   min_ttl     = 0
   max_ttl     = 86400 # 1 day
@@ -308,8 +308,42 @@ resource "aws_cloudfront_cache_policy" "cdn_beanstalk_cache" {
   }
 }
 
-resource "aws_cloudfront_origin_request_policy" "cdn_beanstalk_origin_policy" {
-  name = "${local.namespace}-cdn-origin-policy"
+resource "aws_cloudfront_origin_request_policy" "cdn_beanstalk_request" {
+  name = "${local.namespace}-cdn-eb-origin-request-policy"
+
+  cookies_config {
+    cookie_behavior = "all"
+  }
+  headers_config {
+    header_behavior = "allViewer"
+  }
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+}
+
+# the default policy does not include query strings as cache keys
+resource "aws_cloudfront_cache_policy" "cdn_s3_cache" {
+  name        = "${local.namespace}-cdn-s3-origin-cache-policy"
+  min_ttl     = 0
+  max_ttl     = 31536000 # 1yr
+  default_ttl = 2592000  # 1 month
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+    headers_config {
+      header_behavior = "none"
+    }
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_request_policy" "cdn_s3_request" {
+  name = "${local.namespace}-cdn-s3-origin-request-policy"
 
   cookies_config {
     cookie_behavior = "all"
@@ -340,7 +374,8 @@ module "cdn_beanstalk" {
   aliases                            = [var.site_domain_name]
   allowed_methods                    = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
   block_origin_public_access_enabled = true # so only CDN can access it
-  cache_policy_id                    = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+  # having a default cache policy made the apply fail:
+  # cache_policy_id                    = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
   cached_methods                     = ["GET", "HEAD"]
   cloudfront_access_logging_enabled  = false
   compress                           = true
@@ -361,8 +396,7 @@ module "cdn_beanstalk" {
         origin_read_timeout      = 30
 
         # not mentioned in the docs, is in terraform-aws-cloudfront-cdn module:
-        origin_request_policy_id = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_origin_policy.id
-
+        origin_request_policy_id = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_request.id
       }
     }
   ]
@@ -402,8 +436,8 @@ module "cdn_beanstalk" {
       compress                    = true
       forward_header_values       = []
       forward_query_string        = false
-      cache_policy_id             = ""
-      origin_request_policy_id    = ""
+      cache_policy_id             = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
+      origin_request_policy_id    = resource.aws_cloudfront_origin_request_policy.cdn_s3_request.id
       lambda_function_association = []
       trusted_signers             = []
       trusted_key_groups          = []
@@ -430,8 +464,8 @@ module "cdn_beanstalk" {
       compress                          = true
       forward_header_values             = []
       forward_query_string              = false
-      cache_policy_id                   = ""
-      origin_request_policy_id          = ""
+      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
+      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_s3_request.id
       lambda_function_association       = []
       trusted_signers                   = []
       trusted_key_groups                = []
@@ -460,8 +494,8 @@ module "cdn_beanstalk" {
       compress                          = true
       forward_header_values             = []
       forward_query_string              = false
-      cache_policy_id                   = ""
-      origin_request_policy_id          = ""
+      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
+      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_s3_request.id
       lambda_function_association       = []
       trusted_signers                   = []
       trusted_key_groups                = []
@@ -477,6 +511,7 @@ module "cdn_beanstalk" {
       path_pattern                      = "*"                # send everything else to beanstalk
       forward_cookies                   = "all"
       cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_request.id
       min_ttl                           = 0
       default_ttl                       = 5
       max_ttl                           = 30
@@ -487,7 +522,6 @@ module "cdn_beanstalk" {
       cached_methods                    = ["GET", "HEAD"]
       allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
       compress                          = true
-      origin_request_policy_id          = ""
       function_association              = []
       lambda_function_association       = []
       trusted_signers                   = []
@@ -512,9 +546,9 @@ module "cdn_beanstalk" {
 # export to SSM so cicd can be configured for deployment
 
 resource "aws_ssm_parameter" "cdn_id" {
-  name        = "/${var.eb_env_name}/${var.eb_env_stage}/CLOUDFRONT_DISTRIBUTION_ID"
-  type        = "String"
-  value       = module.cdn_beanstalk.cf_id
+  name  = "/${var.eb_env_name}/${var.eb_env_stage}/CLOUDFRONT_DISTRIBUTION_ID"
+  type  = "String"
+  value = module.cdn_beanstalk.cf_id
 }
 
 resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
