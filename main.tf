@@ -33,8 +33,9 @@ data "aws_acm_certificate" "cdn" {
 }
 
 locals {
-  namespace = "${var.eb_env_namespace}-${var.eb_env_stage}-${var.eb_env_name}"
-  alb_url   = "eb-${var.aws_region}-${var.eb_env_stage}.${var.aws_acm_certificate_domain}"
+  namespace    = "${var.eb_env_namespace}-${var.eb_env_stage}-${var.eb_env_name}"
+  alb_url      = "eb-${var.aws_region}-${var.eb_env_stage}.${var.aws_acm_certificate_domain}"
+  eb_origin_id = "${var.eb_env_name}-${var.aws_region}-${var.eb_env_stage}-beanstalk"
 }
 
 module "vpc" {
@@ -270,19 +271,17 @@ resource "aws_ssm_parameter" "alb_url_param" {
 }
 
 
-
 #####
 # Firewall
 # 
 #####
 
 module "firewall" {
-  source           = "./modules/waf"
-  aws_region       = var.aws_region
-  environment      = var.eb_env_stage
-  top_level_domain = var.site_domain_name
-  rate_limit       = 1000
-  tags             = var.eb_env_tags
+  source      = "./modules/waf"
+  aws_region  = var.aws_region
+  environment = var.eb_env_stage
+  rate_limit  = 1000
+  tags        = var.eb_env_tags
 }
 
 ######
@@ -291,7 +290,7 @@ module "firewall" {
 
 # the default policy does not include query strings as cache keys
 resource "aws_cloudfront_cache_policy" "cdn_beanstalk_cache" {
-  name        = "${local.namespace}-cdn-cache-policy"
+  name        = "${local.namespace}-cdn-eb-cache-policy"
   default_ttl = 300 # 5min
   min_ttl     = 0
   max_ttl     = 86400 # 1 day
@@ -309,8 +308,8 @@ resource "aws_cloudfront_cache_policy" "cdn_beanstalk_cache" {
   }
 }
 
-resource "aws_cloudfront_origin_request_policy" "cdn_beanstalk_origin_policy" {
-  name = "${local.namespace}-cdn-origin-policy"
+resource "aws_cloudfront_origin_request_policy" "cdn_beanstalk_request" {
+  name = "${local.namespace}-cdn-eb-origin-request-policy"
 
   cookies_config {
     cookie_behavior = "all"
@@ -323,36 +322,247 @@ resource "aws_cloudfront_origin_request_policy" "cdn_beanstalk_origin_policy" {
   }
 }
 
-module "cdn_beanstalk" {
-  source               = "git::https://github.com/cloudposse/terraform-aws-cloudfront-cdn.git?ref=tags/0.24.1"
-  acm_certificate_arn  = data.aws_acm_certificate.localregion.arn
-  aliases              = [var.site_domain_name]
-  allowed_methods      = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
-  cache_policy_id      = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
-  compress             = true
-  cached_methods       = ["GET", "HEAD"]
-  forward_query_string = true
-  forward_cookies      = "none"
-  is_ipv6_enabled      = true
-  # logging config, disable because we have from the service itself
-  logging_enabled                 = false
-  log_expiration_days             = 30
-  name                            = var.eb_env_name
-  namespace                       = var.eb_env_namespace
-  environment                     = var.aws_region
-  # origin_domain_name              = module.elastic_beanstalk_environment.endpoint
-  origin_domain_name              = local.alb_url
-  origin_protocol_policy          = "https-only"
-  origin_request_policy_id        = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_origin_policy.id
-  origin_ssl_protocols            = ["TLSv1.2"]
-  parent_zone_name                = var.aws_route53_zone_name
-  price_class                     = "PriceClass_All"
-  stage                           = var.eb_env_stage
-  viewer_protocol_policy          = "https-only"
-  viewer_minimum_protocol_version = "TLSv1.2_2019"
-  web_acl_id                      = module.firewall.wafv2_webacl_arn
+# the default policy does not include query strings as cache keys
+resource "aws_cloudfront_cache_policy" "cdn_s3_cache" {
+  name        = "${local.namespace}-cdn-s3-origin-cache-policy"
+  min_ttl     = 0
+  max_ttl     = 31536000 # 1yr
+  default_ttl = 2592000  # 1 month
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+    headers_config {
+      header_behavior = "none"
+    }
+    query_strings_config {
+      query_string_behavior = "all"
+    }
+  }
 }
 
+resource "aws_cloudfront_origin_request_policy" "cdn_s3_request" {
+  name = "${local.namespace}-cdn-s3-origin-request-policy"
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+  headers_config {
+    header_behavior = "none"
+  }
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+}
+
+# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_function
+resource "aws_cloudfront_function" "cf_fn_origin_root" {
+  # Note this is not a lambda function, but a CloudFront Function!
+  name    = "${local.namespace}-cffn-origin"
+  runtime = "cloudfront-js-1.0"
+  comment = "Rewrites root s3 bucket requests to index.html for all apps (home, chat, admin)"
+  publish = true
+  code    = file("${path.module}/scripts/mentorpal-rewrite-default-index-s3-origin.js")
+}
+
+module "cdn_beanstalk" {
+  source              = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
+  acm_certificate_arn = data.aws_acm_certificate.localregion.arn
+  # TODO perhaps will need to set in order to get cicd to update contents
+  # additional_bucket_policy           = {} 
+  aliases                            = [var.site_domain_name]
+  allowed_methods                    = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+  block_origin_public_access_enabled = true # so only CDN can access it
+  # having a default cache policy made the apply fail:
+  # cache_policy_id                    = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+  cached_methods                    = ["GET", "HEAD"]
+  cloudfront_access_logging_enabled = false
+  compress                          = true
+
+  # second origin - beanstalk instance:
+  custom_origins = [
+    {
+      domain_name    = local.alb_url
+      custom_headers = []
+      origin_id      = local.eb_origin_id
+      origin_path    = ""
+      custom_origin_config = {
+        http_port                = 80
+        https_port               = 443
+        origin_protocol_policy   = "https-only"
+        origin_ssl_protocols     = ["TLSv1", "TLSv1.1", "TLSv1.2"]
+        origin_keepalive_timeout = 5
+        origin_read_timeout      = 30
+
+        # not mentioned in the docs, is in terraform-aws-cloudfront-cdn module:
+        origin_request_policy_id = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_request.id
+      }
+    }
+  ]
+  default_root_object = "/home/index.html"
+  dns_alias_enabled   = true
+  environment         = var.aws_region
+
+  # TODO cicd pipeline
+  # deployment_principal_arns	= {}
+
+  # cookies are used in graphql right? but seems to work with "none":
+  forward_cookies = "none"
+
+  # from the docs: "Amazon S3 returns this index document when requests are made to the root domain or any of the subfolders"
+  # if this is the case then aws_lambda_function.cf_fn_origin_root is not required
+  index_document      = "index.html"
+  ipv6_enabled        = true
+  log_expiration_days = 30
+  name                = var.eb_env_name
+  namespace           = var.eb_env_namespace
+
+  ordered_cache = [
+    {
+      target_origin_id                  = "" # default s3 bucket
+      path_pattern                      = "/home*"
+      viewer_protocol_policy            = "redirect-to-https"
+      min_ttl                           = 0
+      default_ttl                       = 2592000  # 1 month
+      max_ttl                           = 31536000 # 1yr
+      forward_query_string              = false
+      forward_cookies                   = "none"
+      forward_cookies_whitelisted_names = []
+
+      viewer_protocol_policy      = "redirect-to-https"
+      cached_methods              = ["GET", "HEAD"]
+      allowed_methods             = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+      compress                    = true
+      forward_header_values       = []
+      forward_query_string        = false
+      cache_policy_id             = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
+      origin_request_policy_id    = resource.aws_cloudfront_origin_request_policy.cdn_s3_request.id
+      lambda_function_association = []
+      trusted_signers             = []
+      trusted_key_groups          = []
+      response_headers_policy_id  = ""
+      function_association = [{
+        # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
+      }]
+    },
+    {
+      target_origin_id                  = "" # default s3 bucket
+      path_pattern                      = "/chat*"
+      viewer_protocol_policy            = "redirect-to-https"
+      min_ttl                           = 0
+      default_ttl                       = 2592000  # 1 month
+      max_ttl                           = 31536000 # 1yr
+      forward_query_string              = false
+      forward_cookies                   = "none"
+      forward_cookies_whitelisted_names = []
+      viewer_protocol_policy            = "redirect-to-https"
+      cached_methods                    = ["GET", "HEAD"]
+      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+      compress                          = true
+      forward_header_values             = []
+      forward_query_string              = false
+      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
+      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_s3_request.id
+      lambda_function_association       = []
+      trusted_signers                   = []
+      trusted_key_groups                = []
+      response_headers_policy_id        = ""
+      function_association              = []
+      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
+      function_association = [{
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
+      }]
+    },
+    {
+      target_origin_id                  = "" # default s3 bucket
+      path_pattern                      = "/admin*"
+      viewer_protocol_policy            = "redirect-to-https"
+      min_ttl                           = 0
+      default_ttl                       = 2592000  # 1 month
+      max_ttl                           = 31536000 # 1yr
+      forward_query_string              = false
+      forward_cookies                   = "none"
+      forward_cookies_whitelisted_names = []
+      viewer_protocol_policy            = "redirect-to-https"
+      cached_methods                    = ["GET", "HEAD"]
+      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+      compress                          = true
+      forward_header_values             = []
+      forward_query_string              = false
+      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_s3_cache.id
+      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_s3_request.id
+      lambda_function_association       = []
+      trusted_signers                   = []
+      trusted_key_groups                = []
+      response_headers_policy_id        = ""
+      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
+      function_association = [{
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
+      }]
+    },
+    {
+      target_origin_id                  = local.eb_origin_id # check this
+      path_pattern                      = "*"                # send everything else to beanstalk
+      forward_cookies                   = "all"
+      cache_policy_id                   = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
+      origin_request_policy_id          = resource.aws_cloudfront_origin_request_policy.cdn_beanstalk_request.id
+      min_ttl                           = 0
+      default_ttl                       = 5
+      max_ttl                           = 30
+      forward_query_string              = true
+      forward_header_values             = ["*"]
+      forward_cookies_whitelisted_names = ["*"]
+      viewer_protocol_policy            = "redirect-to-https"
+      cached_methods                    = ["GET", "HEAD"]
+      allowed_methods                   = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+      compress                          = true
+      function_association              = []
+      lambda_function_association       = []
+      trusted_signers                   = []
+      trusted_key_groups                = []
+      response_headers_policy_id        = ""
+    }
+  ]
+
+  # comment out to create a new bucket:
+  # origin_bucket	= ""
+  origin_force_destroy = true
+  parent_zone_name     = var.aws_route53_zone_name
+  # https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PriceClass.html
+  price_class = "PriceClass_100"
+  stage       = var.eb_env_stage
+  # this are artifacts generated from github code, no need to version them:
+  versioning_enabled     = false
+  viewer_protocol_policy = "redirect-to-https"
+  web_acl_id             = module.firewall.wafv2_webacl_arn
+}
+
+# export to SSM so cicd can be configured for deployment
+
+resource "aws_ssm_parameter" "cdn_id" {
+  name  = "/${var.eb_env_name}/${var.eb_env_stage}/CLOUDFRONT_DISTRIBUTION_ID"
+  type  = "String"
+  value = module.cdn_beanstalk.cf_id
+}
+
+resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3-websites/ARN"
+  description = "Bucket that stores frontend apps"
+  type        = "String"
+  value       = module.cdn_beanstalk.s3_bucket_arn
+}
+
+resource "aws_ssm_parameter" "cdn_s3_websites_name" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3-websites/NAME"
+  description = "Bucket that stores frontend apps"
+  type        = "String"
+  value       = module.cdn_beanstalk.s3_bucket
+}
 
 data "aws_lb_listener" "http_listener" {
   load_balancer_arn = module.elastic_beanstalk_environment.load_balancers[0]
