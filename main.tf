@@ -472,10 +472,10 @@ module "cdn_beanstalk" {
       response_headers_policy_id        = ""
       function_association              = []
       # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
-      function_association = {
+      function_association = [{
         event_type   = "viewer-request"
         function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
-      }
+      }]
     },
     {
       target_origin_id                  = "" # default s3 bucket
@@ -526,7 +526,7 @@ module "cdn_beanstalk" {
       trusted_signers                   = []
       trusted_key_groups                = []
       response_headers_policy_id        = ""
-    },
+    }
   ]
 
   # comment out to create a new bucket:
