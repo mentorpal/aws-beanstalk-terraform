@@ -376,9 +376,9 @@ module "cdn_beanstalk" {
   block_origin_public_access_enabled = true # so only CDN can access it
   # having a default cache policy made the apply fail:
   # cache_policy_id                    = resource.aws_cloudfront_cache_policy.cdn_beanstalk_cache.id
-  cached_methods                     = ["GET", "HEAD"]
-  cloudfront_access_logging_enabled  = false
-  compress                           = true
+  cached_methods                    = ["GET", "HEAD"]
+  cloudfront_access_logging_enabled = false
+  compress                          = true
 
   # second origin - beanstalk instance:
   custom_origins = [
@@ -471,12 +471,11 @@ module "cdn_beanstalk" {
       trusted_key_groups                = []
       response_headers_policy_id        = ""
       function_association              = []
-      # lets test first with index_document
-      #  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
-      #   function_association = {
-      #     event_type   = "viewer-request"
-      #     function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
-      #   }
+      # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution#function-association
+      function_association = {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.cf_fn_origin_root.arn
+      }
     },
     {
       target_origin_id                  = "" # default s3 bucket
