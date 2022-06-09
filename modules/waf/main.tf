@@ -71,7 +71,7 @@ resource "aws_wafv2_web_acl" "wafv2_webacl" {
         # see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-bot.html
         name        = "AWSManagedRulesBotControlRuleSet"
         vendor_name = "AWS"
-        
+
         excluded_rule {
           name = "CategorySocialMedia" # slack
         }
