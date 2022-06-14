@@ -78,8 +78,8 @@ resource "aws_ssm_parameter" "cdn_static_param" {
 # 
 #####
 module "firewall" {
-  source     = "git@github.com:mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
-  name       = "${var.eb_env_name}-${var.eb_env_stage}"
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
+  name       = "${var.eb_env_name}-cdn-${var.eb_env_stage}"
   scope      = "CLOUDFRONT"
   rate_limit = 1000
   excluded_bot_rules = [
@@ -90,7 +90,7 @@ module "firewall" {
     "SizeRestrictions_BODY",  # 8kb is not enough
     "CrossSiteScripting_BODY" # flags legit image upload attemts
   ]
-  enable_logging = true
+  enable_logging = var.enable_firewall_logging
   aws_region     = var.aws_region
   tags           = var.eb_env_tags
 }
