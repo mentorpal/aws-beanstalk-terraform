@@ -72,7 +72,7 @@ resource "aws_ssm_parameter" "cdn_content_param" {
 }
 
 # TODO remove
-resource "aws_ssm_parameter" "cdn_content_param" {
+resource "aws_ssm_parameter" "cdn_content_param_deprecated" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_static_arn"
   description = "S3 static bucket ARN"
   type        = "SecureString"
