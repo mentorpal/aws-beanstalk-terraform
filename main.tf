@@ -66,17 +66,17 @@ module "cdn_content" {
 # export s3 arn so serverless can pick it up to configure iam policies
 resource "aws_ssm_parameter" "cdn_content_param" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_content_arn"
-  description = "S3 static bucket ARN"
+  description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
-  value       = module.cdn_static.s3_bucket_arn
+  value       = module.cdn_content.s3_bucket_arn
 }
 
 # TODO remove
 resource "aws_ssm_parameter" "cdn_content_param_deprecated" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_static_arn"
-  description = "S3 static bucket ARN"
+  description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
-  value       = module.cdn_static.s3_bucket_arn
+  value       = module.cdn_content.s3_bucket_arn
 }
 
 #####
@@ -114,6 +114,12 @@ module "api_firewall" {
   enable_logging = var.enable_firewall_logging
   aws_region     = var.aws_region
   tags           = var.eb_env_tags
+}
+
+resource "aws_ssm_parameter" "api_firewall_ssm" {
+  name  = "/${var.eb_env_name}/${var.eb_env_stage}/api_firewall_arn"
+  type  = "String"
+  value = module.api_firewall.wafv2_webacl_arn
 }
 
 ######
@@ -235,7 +241,7 @@ module "cdn_static_assets" {
   # this are artifacts generated from github code, no need to version them:
   versioning_enabled     = false
   viewer_protocol_policy = "redirect-to-https"
-  web_acl_id             = module.firewall.wafv2_webacl_arn
+  web_acl_id             = module.cdn_firewall.wafv2_webacl_arn
 }
 
 # export to SSM so cicd can be configured for deployment
