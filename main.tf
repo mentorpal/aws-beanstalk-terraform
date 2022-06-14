@@ -48,7 +48,7 @@ locals {
 # the cdn that serves videos from an s3 bucket, e.g. static.mentorpal.org
 ###
 
-module "cdn_content" {
+module "cdn_static" {
   source               = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.74.0"
   namespace            = "static-${var.eb_env_namespace}"
   stage                = var.eb_env_stage
@@ -68,7 +68,7 @@ resource "aws_ssm_parameter" "cdn_content_param" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_content_arn"
   description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
-  value       = module.cdn_content.s3_bucket_arn
+  value       = module.cdn_static.s3_bucket_arn
 }
 
 # TODO remove
@@ -76,7 +76,7 @@ resource "aws_ssm_parameter" "cdn_content_param_deprecated" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_static_arn"
   description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
-  value       = module.cdn_content.s3_bucket_arn
+  value       = module.cdn_static.s3_bucket_arn
 }
 
 #####
