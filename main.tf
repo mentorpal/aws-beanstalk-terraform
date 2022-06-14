@@ -96,7 +96,7 @@ module "cdn_firewall" {
     "SizeRestrictions_BODY",  # 8kb is not enough
     "CrossSiteScripting_BODY" # flags legit image upload attempts
   ]
-  enable_logging = var.enable_firewall_logging
+  enable_logging = var.enable_cdn_firewall_logging
   aws_region     = var.aws_region
   tags           = var.eb_env_tags
 }
@@ -111,7 +111,7 @@ module "api_firewall" {
     "SizeRestrictions_BODY",  # 8kb is not enough
     "CrossSiteScripting_BODY" # flags legit image upload attempts
   ]
-  enable_logging = var.enable_firewall_logging
+  enable_logging = var.enable_api_firewall_logging
   aws_region     = var.aws_region
   tags           = var.eb_env_tags
 }
