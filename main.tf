@@ -106,7 +106,7 @@ module "api_firewall" {
   source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
   name       = "${var.eb_env_name}-api-${var.eb_env_stage}"
   scope      = "REGIONAL"
-  rate_limit = 100
+  rate_limit = 1000
 
   excluded_bot_rules = [
     "CategoryMonitoring",
