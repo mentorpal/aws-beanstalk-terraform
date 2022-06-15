@@ -88,11 +88,10 @@ module "cdn_firewall" {
   name       = "${var.eb_env_name}-cdn-${var.eb_env_stage}"
   scope      = "CLOUDFRONT"
   rate_limit = 1000
+
   excluded_bot_rules = [
-    "CategoryMonitoring",
-    # classifier & uploader calling graphql:
-    "CategoryHttpLibrary",
-    "SignalNonBrowserUserAgent",
+    "CategorySocialMedia", # slack
+    "CategorySearchEngine" # google bot    
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
@@ -108,11 +107,13 @@ module "api_firewall" {
   name       = "${var.eb_env_name}-api-${var.eb_env_stage}"
   scope      = "REGIONAL"
   rate_limit = 100
-  excluded_bot_rules = [
-    "CategorySocialMedia", # slack
-    "CategorySearchEngine" # google bot    
-  ]
 
+  excluded_bot_rules = [
+    "CategoryMonitoring",
+    # classifier & uploader calling graphql:
+    "CategoryHttpLibrary",
+    "SignalNonBrowserUserAgent",
+  ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
     "CrossSiteScripting_BODY" # flags legit image upload attempts
