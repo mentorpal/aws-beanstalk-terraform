@@ -53,6 +53,19 @@ variable "static_cors_allowed_origins" {
   default     = []
 }
 
+
+variable "enable_cdn_firewall_logging" {
+  type        = bool
+  default     = false
+  description = "enable cdn firewall logging (s3 bucket for storage, and a kinesis stream for delivery)"
+}
+
+variable "enable_api_firewall_logging" {
+  type        = bool
+  default     = false
+  description = "enable api firewall logging (s3 bucket for storage, and a kinesis stream for delivery)"
+}
+
 variable "enable_alarms" {
   type        = bool
   description = "Not used atm, reserved for future alerts"

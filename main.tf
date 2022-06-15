@@ -8,7 +8,6 @@ provider "aws" {
   alias  = "us-east-1"
 }
 
-
 ###
 # Find a certificate for our domain that has status ISSUED
 # NOTE that for now, this infra depends on managing certs INSIDE AWS/ACM
@@ -65,29 +64,73 @@ module "cdn_static" {
 }
 
 # export s3 arn so serverless can pick it up to configure iam policies
-resource "aws_ssm_parameter" "cdn_static_param" {
-  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_static_arn"
-  description = "S3 static bucket ARN"
+resource "aws_ssm_parameter" "cdn_content_param" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_content_arn"
+  description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
   value       = module.cdn_static.s3_bucket_arn
 }
 
+# TODO remove
+resource "aws_ssm_parameter" "cdn_content_param_deprecated" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_static_arn"
+  description = "S3 content (videos, images) bucket ARN"
+  type        = "SecureString"
+  value       = module.cdn_static.s3_bucket_arn
+}
 
 #####
 # Firewall
 # 
 #####
+module "cdn_firewall" {
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
+  name       = "${var.eb_env_name}-cdn-${var.eb_env_stage}"
+  scope      = "CLOUDFRONT"
+  rate_limit = 1000
 
-module "firewall" {
-  source      = "./modules/waf"
-  aws_region  = var.aws_region
-  environment = var.eb_env_stage
-  rate_limit  = 1000
-  tags        = var.eb_env_tags
+  excluded_bot_rules = [
+    "CategorySocialMedia", # slack
+    "CategorySearchEngine" # google bot    
+  ]
+  excluded_common_rules = [
+    "SizeRestrictions_BODY",  # 8kb is not enough
+    "CrossSiteScripting_BODY" # flags legit image upload attempts
+  ]
+  enable_logging = var.enable_cdn_firewall_logging
+  aws_region     = var.aws_region
+  tags           = var.eb_env_tags
+}
+
+module "api_firewall" {
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
+  name       = "${var.eb_env_name}-api-${var.eb_env_stage}"
+  scope      = "REGIONAL"
+  rate_limit = 100
+
+  excluded_bot_rules = [
+    "CategoryMonitoring",
+    # classifier & uploader calling graphql:
+    "CategoryHttpLibrary",
+    "SignalNonBrowserUserAgent",
+  ]
+  excluded_common_rules = [
+    "SizeRestrictions_BODY",  # 8kb is not enough
+    "CrossSiteScripting_BODY" # flags legit image upload attempts
+  ]
+  enable_logging = var.enable_api_firewall_logging
+  aws_region     = var.aws_region
+  tags           = var.eb_env_tags
+}
+
+resource "aws_ssm_parameter" "api_firewall_ssm" {
+  name  = "/${var.eb_env_name}/${var.eb_env_stage}/api_firewall_arn"
+  type  = "String"
+  value = module.api_firewall.wafv2_webacl_arn
 }
 
 ######
-# CloudFront distro in front of Beanstalk
+# CloudFront distro in front of s3
 #
 
 # the default policy does not include query strings as cache keys
@@ -134,7 +177,8 @@ resource "aws_cloudfront_function" "cf_fn_origin_root" {
   code    = file("${path.module}/scripts/mentorpal-rewrite-default-index-s3-origin.js")
 }
 
-module "cdn_beanstalk" {
+# fronts just an s3 bucket with static assets (javascript, css, ...) for frontend apps hosting
+module "cdn_static_assets" {
   source                             = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
   acm_certificate_arn                = data.aws_acm_certificate.localregion.arn
   aliases                            = [var.site_domain_name]
@@ -150,9 +194,6 @@ module "cdn_beanstalk" {
   default_root_object = "/home/index.html"
   dns_alias_enabled   = true
   environment         = var.aws_region
-
-  # TODO cicd pipeline
-  # deployment_principal_arns	= {}
 
   # cookies are used in graphql right? but seems to work with "none":
   forward_cookies = "none"
@@ -207,7 +248,7 @@ module "cdn_beanstalk" {
   # this are artifacts generated from github code, no need to version them:
   versioning_enabled     = false
   viewer_protocol_policy = "redirect-to-https"
-  web_acl_id             = module.firewall.wafv2_webacl_arn
+  web_acl_id             = module.cdn_firewall.wafv2_webacl_arn
 }
 
 # export to SSM so cicd can be configured for deployment
@@ -215,19 +256,19 @@ module "cdn_beanstalk" {
 resource "aws_ssm_parameter" "cdn_id" {
   name  = "/${var.eb_env_name}/${var.eb_env_stage}/CLOUDFRONT_DISTRIBUTION_ID"
   type  = "String"
-  value = module.cdn_beanstalk.cf_id
+  value = module.cdn_static_assets.cf_id
 }
 
 resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3-websites/ARN"
   description = "Bucket that stores frontend apps"
   type        = "String"
-  value       = module.cdn_beanstalk.s3_bucket_arn
+  value       = module.cdn_static_assets.s3_bucket_arn
 }
 
 resource "aws_ssm_parameter" "cdn_s3_websites_name" {
   name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3-websites/NAME"
   description = "Bucket that stores frontend apps"
   type        = "String"
-  value       = module.cdn_beanstalk.s3_bucket
+  value       = module.cdn_static_assets.s3_bucket
 }
