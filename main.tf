@@ -107,7 +107,8 @@ module "content_backup" {
   alert_topic_arn = var.alert_topic_arn
 
   resources = [
-    module.cdn_static.s3_bucket_arn
+    module.cdn_static.s3_bucket_arn,
+    module.cdn_static_assets.s3_bucket_arn
   ]
   tags = var.eb_env_tags
 }

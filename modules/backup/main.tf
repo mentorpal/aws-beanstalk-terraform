@@ -37,6 +37,6 @@ resource "aws_backup_selection" "backup_selection" {
 resource "aws_backup_vault_notifications" "failed_alerts" {
   backup_vault_name = aws_backup_vault.continuous_backup_vault.name
   sns_topic_arn     = var.alert_topic_arn
-  # backup_vault_events = ["BACKUP_JOB_STARTED", "BACKUP_JOB_COMPLETED", "BACKUP_JOB_SUCCESSFUL", "BACKUP_JOB_FAILED"]
-  backup_vault_events = ["BACKUP_JOB_FAILED"]
+  backup_vault_events = ["BACKUP_JOB_STARTED", "BACKUP_JOB_COMPLETED", "BACKUP_JOB_SUCCESSFUL", "BACKUP_JOB_FAILED"]
+  # backup_vault_events = ["BACKUP_JOB_FAILED"]
 }
