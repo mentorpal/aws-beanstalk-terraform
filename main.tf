@@ -56,6 +56,7 @@ module "cdn_static" {
   aliases              = [local.static_alias]
   cors_allowed_origins = local.static_cors_allowed_origins
   dns_alias_enabled    = true
+  versioning_enabled   = true
   parent_zone_name     = var.aws_route53_zone_name
   acm_certificate_arn  = data.aws_acm_certificate.cdn.arn
   # bugfix: required for video playback after upload
@@ -77,6 +78,26 @@ resource "aws_ssm_parameter" "cdn_content_param_deprecated" {
   description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
   value       = module.cdn_static.s3_bucket_arn
+}
+
+# Cleanup old versions to avoid unnecessary costs.
+# Must have bucket versioning enabled for this to work!
+resource "aws_s3_bucket_lifecycle_configuration" "content_bucket_version_expire_policy" {
+  bucket = module.cdn_static.s3_bucket
+
+  rule {
+    id = "config"
+
+    filter {
+      # all objects
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+
+    status = "Enabled"
+  }
 }
 
 #####
@@ -106,7 +127,7 @@ module "api_firewall" {
   source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
   name       = "${var.eb_env_name}-api-${var.eb_env_stage}"
   scope      = "REGIONAL"
-  rate_limit = 100
+  rate_limit = 1000
 
   excluded_bot_rules = [
     "CategoryMonitoring",
