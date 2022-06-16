@@ -80,6 +80,6 @@ variable "enable_alarms" {
 
 variable "alert_topic_arn" {
   type        = string
-  description = "Not used atm, reserved for future alerts"
+  description = "sns topic arn used for alerts"
   default     = ""
 }

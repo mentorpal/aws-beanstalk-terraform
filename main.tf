@@ -101,9 +101,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "content_bucket_version_expire_
 }
 
 module "content_backup" {
-  count  = var.enable_content_backup ? 1 : 0
-  source = "./modules/backup"
-  name   = "${var.eb_env_name}-s3-content-backup-${var.eb_env_stage}"
+  count           = var.enable_content_backup ? 1 : 0
+  source          = "./modules/backup"
+  name            = "${var.eb_env_name}-s3-content-backup-${var.eb_env_stage}"
+  alert_topic_arn = var.alert_topic_arn
+
   resources = [
     module.cdn_static.s3_bucket_arn
   ]

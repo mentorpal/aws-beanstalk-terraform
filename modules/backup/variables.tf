@@ -8,6 +8,12 @@ variable "resources" {
   type        = list(string)
 }
 
+variable "alert_topic_arn" {
+  type        = string
+  description = "sns topic arn used for alerts"
+  default     = ""
+}
+
 variable "tags" {
   description = "A map of tags to apply to the backup plan, vaults etc"
   type        = map(any)
