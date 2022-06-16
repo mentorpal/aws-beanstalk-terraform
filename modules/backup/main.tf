@@ -3,7 +3,7 @@ resource "aws_backup_plan" "backup_plan" {
   tags = var.tags
 
   rule {
-    rule_name                = "${var.name}-backup-continuous-rule"
+    rule_name                = "${var.name}-backup-rule"
     target_vault_name        = aws_backup_vault.continuous_backup_vault.name
     enable_continuous_backup = true # works for s3 and rds
     completion_window        = 300
@@ -34,7 +34,7 @@ resource "aws_backup_selection" "backup_selection" {
   resources = var.resources
 }
 
-resource "aws_backup_vault_notifications" "test" {
+resource "aws_backup_vault_notifications" "failed_alerts" {
   backup_vault_name = aws_backup_vault.continuous_backup_vault.name
   sns_topic_arn     = var.alert_topic_arn
   # backup_vault_events = ["BACKUP_JOB_STARTED", "BACKUP_JOB_COMPLETED", "BACKUP_JOB_SUCCESSFUL", "BACKUP_JOB_FAILED"]
