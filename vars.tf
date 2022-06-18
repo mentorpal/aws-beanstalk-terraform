@@ -66,6 +66,12 @@ variable "enable_api_firewall_logging" {
   description = "enable api firewall logging (s3 bucket for storage, and a kinesis stream for delivery)"
 }
 
+variable "enable_content_backup" {
+  type        = bool
+  description = "if true configures aws backup service to continuously backup uploads"
+  default     = true
+}
+
 variable "enable_alarms" {
   type        = bool
   description = "Not used atm, reserved for future alerts"
@@ -74,6 +80,6 @@ variable "enable_alarms" {
 
 variable "alert_topic_arn" {
   type        = string
-  description = "Not used atm, reserved for future alerts"
+  description = "sns topic arn used for alerts"
   default     = ""
 }
