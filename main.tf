@@ -107,8 +107,7 @@ module "content_backup" {
   alert_topic_arn = var.alert_topic_arn
 
   resources = [
-    module.cdn_static.s3_bucket_arn,
-    module.cdn_static_assets.s3_bucket_arn
+    module.cdn_static.s3_bucket_arn
   ]
   tags = var.eb_env_tags
 }
@@ -280,7 +279,7 @@ module "cdn_static_assets" {
   price_class = "PriceClass_100"
   stage       = var.eb_env_stage
   # this are artifacts generated from github code, no need to version them:
-  versioning_enabled     = false
+  versioning_enabled     = true # test backup
   viewer_protocol_policy = "redirect-to-https"
   web_acl_id             = module.cdn_firewall.wafv2_webacl_arn
 }
