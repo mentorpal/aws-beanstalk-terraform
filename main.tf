@@ -2,7 +2,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-# to work with CLOUDFRONT firewall region must be us-east-1
+# some resources must be created in N.Virginia
 provider "aws" {
   region = "us-east-1"
   alias  = "us-east-1"
@@ -12,11 +12,6 @@ provider "aws" {
 # Find a certificate for our domain that has status ISSUED
 # NOTE that for now, this infra depends on managing certs INSIDE AWS/ACM
 ###
-data "aws_acm_certificate" "localregion" {
-  domain   = var.aws_acm_certificate_domain
-  statuses = ["ISSUED"]
-}
-
 data "aws_acm_certificate" "cdn" {
   provider = aws.us-east-1
   domain   = var.aws_acm_certificate_domain
@@ -70,6 +65,7 @@ resource "aws_ssm_parameter" "cdn_content_param" {
   description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
   value       = module.cdn_static.s3_bucket_arn
+  tags        = var.eb_env_tags
 }
 
 # TODO remove
@@ -78,6 +74,7 @@ resource "aws_ssm_parameter" "cdn_content_param_deprecated" {
   description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
   value       = module.cdn_static.s3_bucket_arn
+  tags        = var.eb_env_tags
 }
 
 # Cleanup old versions to avoid unnecessary costs.
@@ -86,7 +83,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "content_bucket_version_expire_
   bucket = module.cdn_static.s3_bucket
 
   rule {
-    id = "config"
+    id     = "config"
+    status = "Enabled"
 
     filter {
       # all objects
@@ -96,14 +94,16 @@ resource "aws_s3_bucket_lifecycle_configuration" "content_bucket_version_expire_
       noncurrent_days = 30
     }
 
-    status = "Enabled"
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
   }
 }
 
 module "content_backup" {
-  count           = var.enable_content_backup ? 1 : 0
-  source          = "git::https://github.com/mentorpal/terraform-modules//modules/backup?ref=tags/v1.5.0"
-  name            = "${var.eb_env_name}-s3-content-backup-${var.eb_env_stage}"
+  count  = var.enable_content_backup ? 1 : 0
+  source = "git::https://github.com/mentorpal/terraform-modules//modules/backup?ref=tags/v1.5.1"
+  name   = "${var.eb_env_name}-s3-content-backup-${var.eb_env_stage}"
 
   resources = [
     module.cdn_static.s3_bucket_arn
@@ -125,6 +125,12 @@ module "cdn_firewall" {
   scope      = "CLOUDFRONT"
   rate_limit = 1000
 
+  # cloudfront waf must be in N.Virginia
+  aws_region = "us-east-1"
+  providers = {
+    aws = aws.us-east-1
+  }
+
   excluded_bot_rules = [
     "CategorySocialMedia", # slack
     "CategorySearchEngine" # google bot    
@@ -134,7 +140,6 @@ module "cdn_firewall" {
     "CrossSiteScripting_BODY" # flags legit image upload attempts
   ]
   enable_logging = var.enable_cdn_firewall_logging
-  aws_region     = var.aws_region
   tags           = var.eb_env_tags
 }
 
@@ -163,6 +168,7 @@ resource "aws_ssm_parameter" "api_firewall_ssm" {
   name  = "/${var.eb_env_name}/${var.eb_env_stage}/api_firewall_arn"
   type  = "String"
   value = module.api_firewall.wafv2_webacl_arn
+  tags  = var.eb_env_tags
 }
 
 ######
@@ -216,7 +222,7 @@ resource "aws_cloudfront_function" "cf_fn_origin_root" {
 # fronts just an s3 bucket with static assets (javascript, css, ...) for frontend apps hosting
 module "cdn_static_assets" {
   source                             = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
-  acm_certificate_arn                = data.aws_acm_certificate.localregion.arn
+  acm_certificate_arn                = data.aws_acm_certificate.cdn.arn
   aliases                            = [var.site_domain_name]
   allowed_methods                    = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
   block_origin_public_access_enabled = true # so only CDN can access it
@@ -289,10 +295,13 @@ module "cdn_static_assets" {
 
 # export to SSM so cicd can be configured for deployment
 
+# cicd pipeline runs in us-east-1 so its easier to have them too in the same region
 resource "aws_ssm_parameter" "cdn_id" {
-  name  = "/${var.eb_env_name}/${var.eb_env_stage}/CLOUDFRONT_DISTRIBUTION_ID"
-  type  = "String"
-  value = module.cdn_static_assets.cf_id
+  name     = "/${var.eb_env_name}/${var.eb_env_stage}/CLOUDFRONT_DISTRIBUTION_ID"
+  type     = "String"
+  value    = module.cdn_static_assets.cf_id
+  provider = aws.us-east-1
+  tags     = var.eb_env_tags
 }
 
 resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
@@ -300,6 +309,8 @@ resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
   description = "Bucket that stores frontend apps"
   type        = "String"
   value       = module.cdn_static_assets.s3_bucket_arn
+  provider    = aws.us-east-1
+  tags        = var.eb_env_tags
 }
 
 resource "aws_ssm_parameter" "cdn_s3_websites_name" {
@@ -307,4 +318,6 @@ resource "aws_ssm_parameter" "cdn_s3_websites_name" {
   description = "Bucket that stores frontend apps"
   type        = "String"
   value       = module.cdn_static_assets.s3_bucket
+  provider    = aws.us-east-1
+  tags        = var.eb_env_tags
 }
