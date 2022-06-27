@@ -120,10 +120,13 @@ module "content_backup" {
 # 
 #####
 module "cdn_firewall" {
-  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
+  # source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
+  source = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=waf-api-ip"
+
   name       = "${var.eb_env_name}-cdn-${var.eb_env_stage}"
   scope      = "CLOUDFRONT"
   rate_limit = 1000
+
 
   # cloudfront waf must be in N.Virginia
   aws_region = "us-east-1"
@@ -131,6 +134,7 @@ module "cdn_firewall" {
     aws = aws.us-east-1
   }
 
+  disable_bot_protection_for_amazon_ips = false
   excluded_bot_rules = [
     "CategorySocialMedia", # slack
     "CategorySearchEngine" # google bot    
@@ -144,16 +148,16 @@ module "cdn_firewall" {
 }
 
 module "api_firewall" {
-  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
+  # source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
+  source = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=waf-api-ip"
+
   name       = "${var.eb_env_name}-api-${var.eb_env_stage}"
   scope      = "REGIONAL"
   rate_limit = 1000
 
+  disable_bot_protection_for_amazon_ips = true
   excluded_bot_rules = [
     "CategoryMonitoring",
-    # classifier & uploader calling graphql:
-    "CategoryHttpLibrary",
-    "SignalNonBrowserUserAgent",
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
