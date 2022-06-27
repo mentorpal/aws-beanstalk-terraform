@@ -120,9 +120,7 @@ module "content_backup" {
 # 
 #####
 module "cdn_firewall" {
-  # source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
-  source = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=waf-aws-ip"
-
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.0"
   name       = "${var.eb_env_name}-cdn-${var.eb_env_stage}"
   scope      = "CLOUDFRONT"
   rate_limit = 1000
@@ -148,9 +146,7 @@ module "cdn_firewall" {
 }
 
 module "api_firewall" {
-  # source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.4.1"
-  source = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=waf-aws-ip"
-
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.0"
   name       = "${var.eb_env_name}-api-${var.eb_env_stage}"
   scope      = "REGIONAL"
   rate_limit = 1000
