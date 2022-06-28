@@ -1,0 +1,77 @@
+##
+# There's no project-independent infra repo for the entire account,
+# so putting this here for now
+#
+
+module "notify_slack" {
+  source  = "terraform-aws-modules/notify-slack/aws"
+  version = "~> 4.0"
+
+  sns_topic_name = "slack-alerts-${var.eb_env_stage}-${var.eb_env_namespace}"
+
+  lambda_function_name = "notify-slack-${var.eb_env_stage}-${var.eb_env_namespace}"
+
+  slack_webhook_url = var.cloudwatch_slack_webhook
+  slack_channel     = var.alerts_slack_channel
+  slack_username    = var.alerts_slack_username
+}
+
+resource "aws_ssm_parameter" "sns_alert_topic_arn" {
+  name        = "/${var.eb_env_name}/${var.eb_env_stage}/shared/sns_alert_topic_arn"
+  description = "Slack alert topic"
+  type        = "String"
+  value       = module.notify_slack.this_slack_topic_arn
+}
+
+
+##
+# Creates a shared SNS topic for all CI/CD notifications (build, deploy)
+#
+module "notify_slack_cicd" {
+  source  = "git::https://github.com/mentorpal/terraform-modules//modules/notify-slack?ref=tags/v1.2.3"
+  # source  = "terraform-aws-modules/notify-slack/aws"
+  # version = "~> 4.0" # cannot use 5.0 for aws 4.x because cdn-s3 module requires aws 3.x
+
+  create_sns_topic = true
+  sns_topic_name   = "slack-cicd-alerts"
+
+  lambda_function_name = "notify-slack-cicd"
+  lambda_description	 = "forward SNS messages to Slack"
+
+  slack_webhook_url = var.cicd_slack_webhook
+  slack_channel     = var.cicd_slack_channel
+  slack_username    = var.cicd_slack_username
+
+  # lambda_function_tags = {} same as tags by default?
+  tags = {
+    Source = "terraform"
+    Project = "mentorpal"
+  }
+}
+
+resource "aws_ssm_parameter" "sns_cicd_alert_topic_arn" {
+  name        = "/shared/sns_cicd_alert_topic_arn"
+  description = "Slack cicd alert topic"
+  type        = "String"
+  value       = module.notify_slack_cicd.this_slack_topic_arn
+}
+
+resource "aws_sns_topic_policy" "allow_publish_policy" {
+  arn    = module.notify_slack_cicd.this_slack_topic_arn
+  policy = data.aws_iam_policy_document.sns_eb_topic_policy.json
+}
+
+data "aws_iam_policy_document" "sns_eb_topic_policy" {
+  statement {
+    sid    = "PublishEventsToSnsTopic"
+    effect = "Allow"
+
+    principals {
+      identifiers = ["events.amazonaws.com"]
+      type        = "Service"
+    }
+
+    actions   = ["sns:Publish"]
+    resources = [module.notify_slack_cicd.this_slack_topic_arn]
+  }
+}

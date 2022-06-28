@@ -1,24 +1,20 @@
-# e.g. 'mentorpal.info' (must be in AWS certificate manager)>
-aws_acm_certificate_domain = "<domain name of your site>"
+# must be in AWS certificate manager:
+aws_acm_certificate_domain = "mentorpal.info"
 
 # e.g. us-east-1
-aws_region = "<AWS REGION>"
+aws_region = "us-east-1"
 
 # usualy name as `aws_acm_certificate_domain` with . at the end
-aws_route53_zone_name = "<e.g. mentorpal.info.>"
-
-# usually just `a` and `b` for your AWS_REGION, e.g. ["us-east-1a", "us-east-1b"]
-aws_availability_zones = ["<a>", "<b>"]
+aws_route53_zone_name = "mentorpal.info"
 
 # namespace to prefix all things your app
-eb_env_namespace = "<a namespace>"
-
+eb_env_namespace = "mentorpal"
+eb_env_name      = "mentorpal"
 # name of stage, e.g 'test' or 'dev' or 'prod'
-eb_env_stage = "<stage name>"
+eb_env_stage = "qa"
 
-# the non-secret google client id that configure google auth
-# https://developers.google.com/identity/one-tap/web/guides/get-google-api-clientid
-google_client_id = "<your client id>"
+site_domain_name = "qa.mentorpal.info"
+static_cors_allowed_origins = ["mentorpal.info", "*.mentorpal.info"]
 
-# public domain name of site, e.g. dev.mentorpal.org
-site_domain_name = "<site-domain-name>"
+enable_api_firewall_logging = true
+enable_cdn_firewall_logging = false

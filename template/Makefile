@@ -31,7 +31,3 @@ apply: .terraform
 .PHONY: output-%
 tf-output-%: .terraform
 	terragrunt output $*
-
-.PHONY: output-%
-output-efs_file_system_id:
-	$(MAKE) tf-output-efs_file_system_id

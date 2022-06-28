@@ -1,33 +1,25 @@
-# Terraform Template for a new mentorpal site on AWS Elastic Beanstalk
-
-This is a template for the terraform to set up your site's "mentorpal on AWS Elastic Beanstalk" infrastructure. The basic idea is that you can copy the contents of this template folder, edit a few values and then use to `terraform`/`terragrunt` to deploy the infrastructure.
-
 ## Roles and permissions
-
-A central intention of this setup is to allow developers to define the infrastructure for an mentorpal deployment even though they may not have permissions in AWS to execute the deployment.
-
-In practice, these two roles may be assumed by a single person, but will try to distinguish instructions as to whether to one or the other for cases where it really is two different people.
 
 ### Developer
 
-Wants this site set up, maybe in possession of some key elements of its configuration (e.g. SaaS `MONGO_URI` and `GOOGLE_CLIENT_ID`) but likely NOT having AWS permissions to run the terraform themselves.
+Needs this infrastructure provisioned, might have AWS account, but does not require AWS permissions to run the terraform.
 
+### Admin
 
-### AWS Admin
-
-Has sufficient privileges in the relevant AWS account to build all the infrastructure (basically has to be `admin`). Ideally, has AWS expertise to review infrastructure (including the underlying terraform modules used herein and not just the template-local config) with an eye for security and best practices.
+Has sufficient privileges in the relevant AWS account to build all the infrastructure. 
+Ideally, has AWS expertise to review infrastructure, with an eye for security and best practices.
 
 
 ## Required Software
 
  
 ```
-**NOTE** only the `AWS Admin` really needs `terraform` and `terragrunt` installed (to actually deploy the infrastructure). 
+**NOTE** only the `Admin` really needs `terraform` and `terragrunt` installed (to actually deploy the infrastructure). 
 ```
 
- The `AWS Admin` MUST have both `terraform` and `terragrunt`. `terragrunt` is a light wrapper over terraform that helps keep terraform DRY, but more importantly for this case, it solves a chicken/egg problem terraform has where you need an s3 state bucket in place to `terraform init`
+ The `Admin` MUST have both `terraform` and `terragrunt`. `terragrunt` is a light wrapper over terraform that helps keep terraform DRY, but more importantly for this case, it solves a chicken/egg problem terraform has where you need an s3 state bucket in place to `terraform init`
 
- The `Developer` with limited AWS perms may also want these tools installed, but mainly for purpose of reading `terraform` output values that are needed in configuration of the actual mentorpal app elsewhere (e.g. the id of the `EFS` file system).
+ The `Developer` with limited AWS perms may also want these tools installed.
 
  On mac and most linux flavors, you can install both terraform and terragrunt with [homebrew](https://brew.sh/), e.g.
 
@@ -44,48 +36,59 @@ Has sufficient privileges in the relevant AWS account to build all the infrastru
 
 To configure infrastructure for a new mentorpal site using this module you will need the following:
 
-- (`AWS Admin`) an `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for an AWS iam with admin permissions
+- (`Admin`): an `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for an AWS iam with admin permissions
+- (`Admin`): A domain name and SSL certificate for your mentorpal site. Current terraform assumes this is all in AWS with cert in `AWS Certificate Manager` and DNS in `AWS Route 53`), and you must have an instance of the certificate in the same AWS region where you are deploying the app (you can create certs for the same domain in multiple regions with ACM.)
+- (`Admin`): optionally a Github organization/account admin access to configure cicd pipelines
+- (`Developer`): a `MONGO_URI` for read/write connections to a [mongodb](https://www.mongodb.com/1) instance (you can use a free mongodb.com instance for this to start)
+- (`Developer`): a [GOOGLE_CLIENT_ID](https://developers.google.com/identity/one-tap/web/guides/get-google-api-clientid) for google user authentication
 
-- (`Developer`) a `MONGO_URI` for read/write connections to a [mongodb](https://www.mongodb.com/1) instance (you can use a free mongodb.com instance for this to start)
-
-- (`Developer`) a [GOOGLE_CLIENT_ID](https://developers.google.com/identity/one-tap/web/guides/get-google-api-clientid) for google user authentication
-
-- A domain name and SSL certificate for your mentorpal site. Current terraform assumes this is all in AWS with cert in `AWS Certificate Manager` and DNS in `AWS Route 53`), and you must have an instance of the certificate in the same AWS region where you are deploying the app (you can create certs for the same domain in multiple regions with ACM.)
-
-## Configuring this template for a New mentorpal Site
-
-Once `Developer` has required external software, domains, certs, etc in hand, follow these steps:
-
-- copy the contents of this template (e.g. to a repo of your own)
-
-- edit `terraform.tfvars` with config details for your site
-
-- edit `terragrunt.hcl` with config details for your site
-
-- rename `scret.auto.tfvars` to `secret.auto.tfvars` (so it will be .gitignored) and configure the secrets. Secret management is external (e.g. maybe secrets were shared via 1password)
-
-- Put in whatever best form to share with `AWS Admin`, e.g. branch, Pull Request and Request Review in gitub
 
 ## Deploying/Updating the Infrastructure to AWS
 
-Once `AWS Admin` has received and approved the configured terraform.
+Once `Admin` has required external software, domains, certs, etc in hand, follow these steps:
 
-- make sure AWS credentials are available in shell, e.g.
+1. make sure AWS credentials are available in shell, e.g.
+    > ```bash
+    > export AWS_ACCESS_KEY_ID=<your_id>
+    > export AWS_SECRET_ACCESS_KEY=<your_secret>
+    > ```
+2. clone this repo
+3. edit `terragrunt.tfvars` with config details for your site
+4. create `secret.tfvars` based on `./secret.tfvars.template`
+5. edit `terragrunt.hcl` with config details for your site
+6. edit `main.tf` with config details for your site
+7. (optional) to configure slack notifications: `mv global.tf.template global.tf`
+8. run `make apply`
+9. when prompted with the terraform plan, you have to enter `yes` to proceed
+10. terraform will run for maybe 20 minutes total (waiting for AWS to build things). When if completes successfully, it will create and store required parameters in the SSM (e.g. `CLOUDFRONT_DISTRIBUTION_ID` which you will use to configure your app deployment).
+11. optional create a CodeStar-Github connection and approve in Github
+12. create SSM parameters. Secret management is external (e.g. maybe secrets were shared via 1password). Required params: 
+  - /mentorpal/<env>/shared/api_secret
+  - /mentorpal/<env>/shared/jwt_secret
+  - /mentorpal/graphql/<env>/mongo_uri
+  - /mentorpal/<env>/shared/GOOGLE_CLIENT_ID
+  - (optional): /mentorpal/infrastructure/cicd/CODESTAR_GITHUB_ARN
+  - (optional): /mentorpal/upload/sentry_dsn, /mentorpal/classifier/sentry_dsn, /mentorpal/graphql/sentry_dsn
 
-> ```bash
-> export AWS_ACCESS_KEY_ID=<your_id>
-> export AWS_SECRET_ACCESS_KEY=<your_secret>
-> ```
+The provisioned infrastructure contains resources required to run applications:
+ - S3 buckets
+ - CDNs
+ - firewalls
+ - SSM parameters
 
-- in shell from where you put your terraform files do `make apply`
+You can now proceed and deploy the applications (either by provisioning CICD pipelines or manually):
+ - https://github.com/mentorpal/sbert-service (no cicd provided yet)
+ - https://github.com/mentorpal/mentor-graphql
+ - https://github.com/mentorpal/mentor-upload-processor
+ - https://github.com/mentorpal/classifier-service
+ - https://github.com/mentorpal/mentor-admin
+ - https://github.com/mentorpal/mentor-home-page
+ - https://github.com/mentorpal/mentor-client
 
-- when prompted with the terraform plan, you have to enter `yes` to proceed
-
-- terraform will run for maybe 20 minutes total (waiting for AWS to build things). When if completes successfully, it will output an `efs_file_system_id` which you will use to configure your app deployment. You can also get the `efs_file_system_id` at any time after the infrastructure is up using `make output-efs_file_system_id`
-
+Each application cicd pipeline will read necessary config parameters from SSM. 
 
  ## FAQ
 
  ### Why execute the terraform manually rather than in CI?
 
- Really, it would be better to have `terraform` execute in a CI environment based on some specific trigger (e.g. a tag with a `semver` format from `main`.) The reason we don't do this yet is that `github` lacks sufficient tag-permissioning features to securely guarantee that any person with write access to the repo, couldn't trigger an infrastructure update. Github will likely eventually acquire these features (gitlab already has it), so we should revisit periodically.
+ Really, it would be better to have `terraform` execute in a CI environment based on some specific trigger (e.g. a tag with a `semver` format from `main`.) The reason we don't do this yet is that it's not trivial to efficiently automate terragrunt applies. 
