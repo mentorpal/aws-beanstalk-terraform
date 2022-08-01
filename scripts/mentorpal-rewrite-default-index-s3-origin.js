@@ -22,15 +22,15 @@ function handler(event) {
     return response;
   }
 
-  if (uri == "/home" || uri == "/home/") {
-    request.uri = "/home/index.html";
+  // If the request is for a static file, return the file.
+  // otherwise return the index.html file.
+  // examples:
+  //  - /home -> /home/index.html
+  //  - /admin/file.js -> /admin/file.js
+  //  - /admin/record?videoId=8283ad00 -> /admin/index.html
+  if (!uri.includes(".")) {
+    request.uri = "/" + uri.split("/").filter(e=>e.length)[0] +"/index.html";
   }
-  if (uri == "/chat" || uri == "/chat/") {
-    request.uri = "/chat/index.html";
-  }
-  if (uri == "/admin" || uri == "/admin/") {
-    request.uri = "/admin/index.html";
-  }
-
+  
   return request;
 }
