@@ -63,7 +63,7 @@ resource "aws_cloudwatch_event_rule" "log_groups" {
   event_pattern = <<PATTERN
 {
   "source": [
-    "aws.llogs"
+    "aws.logs"
   ],
   "detail-type": [
     "AWS API Call via CloudTrail"
