@@ -4,7 +4,7 @@
  * @param {*} event 
  * @returns 
  */
-function handler(event) {
+ function handler(event) {
   var request = event.request;
   var uri = request.uri;
 
@@ -22,14 +22,8 @@ function handler(event) {
     return response;
   }
 
-  if (uri == "/home" || uri == "/home/") {
-    request.uri = "/home/index.html";
-  }
-  if (uri == "/chat" || uri == "/chat/") {
-    request.uri = "/chat/index.html";
-  }
-  if (uri == "/admin" || uri == "/admin/") {
-    request.uri = "/admin/index.html";
+  if (!uri.includes(".")) {
+    request.uri = "/" + uri.split("/").filter(e=>e.length).join("/") +"/index.html";
   }
 
   return request;
