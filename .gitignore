@@ -9,3 +9,6 @@
 !.elasticbeanstalk/*.global.yml
 backend.tf
 .env
+.DS_Store
+terraform-modules/
+template/builds

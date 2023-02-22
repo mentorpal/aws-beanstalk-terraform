@@ -13,21 +13,15 @@ variable "aws_route53_zone_name" {
   description = "name to find aws route53 zone, e.g. mentorpal.org."
 }
 
-variable "eb_env_name" {
-  type        = string
-  description = "Solution name, e.g. 'app' or 'cluster'"
-  default     = "mentorpal"
-}
-
 variable "eb_env_namespace" {
   type        = string
   description = "Namespace, which could be your organization name, e.g. 'eg' or 'cp'"
 }
 
-variable "eb_env_tags" {
-  type        = map(string)
-  default     = {}
-  description = "Additional tags (e.g. `map('BusinessUnit`,`XYZ`)"
+variable "eb_env_name" {
+  type        = string
+  description = "Solution name, e.g. 'app' or 'cluster'"
+  default     = "mentorpal"
 }
 
 variable "site_domain_name" {
@@ -35,9 +29,9 @@ variable "site_domain_name" {
   description = "the public domain name for this site, e.g. mentorpal.org"
 }
 
-variable "static_site_alias" {
+variable "secret_newrelic_api_key" {
   type        = string
-  description = "alias for static site that will serve video etc. By default, generates one based on site_domain_name"
+  description = "new relic ingest key"
   default     = ""
 }
 
@@ -45,6 +39,18 @@ variable "static_cors_allowed_origins" {
   type        = list(string)
   description = "list of cors allowed origins for static"
   default     = []
+}
+
+variable "cloudwatch_slack_webhook" {
+  type        = string
+  description = "The slack app incoming webhook."
+  default     = ""
+}
+
+variable "cicd_slack_webhook" {
+  type        = string
+  description = "The slack app incoming webhook for cicd notifications."
+  default     = ""
 }
 
 variable "enable_cdn_firewall_logging" {
@@ -57,22 +63,4 @@ variable "enable_api_firewall_logging" {
   type        = bool
   default     = false
   description = "enable api firewall logging (s3 bucket for storage, and a kinesis stream for delivery)"
-}
-
-variable "enable_content_backup" {
-  type        = bool
-  description = "if true configures aws backup service to continuously backup uploads"
-  default     = true
-}
-
-variable "enable_alarms" {
-  type        = bool
-  description = "Not used atm, reserved for future alerts"
-  default     = false
-}
-
-variable "alert_topic_arn" {
-  type        = string
-  description = "sns topic arn used for alerts"
-  default     = ""
 }

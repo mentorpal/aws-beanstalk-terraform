@@ -6,15 +6,15 @@ Needs this infrastructure provisioned, might have AWS account, but does not requ
 
 ### Admin
 
-Has sufficient privileges in the relevant AWS account to build all the infrastructure. 
+Has sufficient privileges in the relevant AWS account to build all the infrastructure.
 Ideally, has AWS expertise to review infrastructure, with an eye for security and best practices.
 
 
 ## Required Software
 
- 
+
 ```
-**NOTE** only the `Admin` really needs `terraform` and `terragrunt` installed (to actually deploy the infrastructure). 
+**NOTE** only the `Admin` really needs `terraform` and `terragrunt` installed (to actually deploy the infrastructure).
 ```
 
  The `Admin` MUST have both `terraform` and `terragrunt`. `terragrunt` is a light wrapper over terraform that helps keep terraform DRY, but more importantly for this case, it solves a chicken/egg problem terraform has where you need an s3 state bucket in place to `terraform init`
@@ -62,7 +62,7 @@ Once `Admin` has required external software, domains, certs, etc in hand, follow
 9. when prompted with the terraform plan, you have to enter `yes` to proceed
 10. terraform will run for maybe 20 minutes total (waiting for AWS to build things). When if completes successfully, it will create and store required parameters in the SSM (e.g. `CLOUDFRONT_DISTRIBUTION_ID` which you will use to configure your app deployment).
 11. optional create a CodeStar-Github connection and approve in Github
-12. create SSM parameters. Secret management is external (e.g. maybe secrets were shared via 1password). Required params: 
+12. create SSM parameters. Secret management is external (e.g. maybe secrets were shared via 1password). Required params:
   - /mentorpal/<env>/shared/api_secret
   - /mentorpal/<env>/shared/jwt_secret
   - /mentorpal/graphql/<env>/mongo_uri
@@ -85,10 +85,10 @@ You can now proceed and deploy the applications (either by provisioning CICD pip
  - https://github.com/mentorpal/mentor-home-page
  - https://github.com/mentorpal/mentor-client
 
-Each application cicd pipeline will read necessary config parameters from SSM. 
+Each application cicd pipeline will read necessary config parameters from SSM.
 
  ## FAQ
 
  ### Why execute the terraform manually rather than in CI?
 
- Really, it would be better to have `terraform` execute in a CI environment based on some specific trigger (e.g. a tag with a `semver` format from `main`.) The reason we don't do this yet is that it's not trivial to efficiently automate terragrunt applies. 
+ Really, it would be better to have `terraform` execute in a CI environment based on some specific trigger (e.g. a tag with a `semver` format from `main`.) The reason we don't do this yet is that it's not trivial to efficiently automate terragrunt applies.

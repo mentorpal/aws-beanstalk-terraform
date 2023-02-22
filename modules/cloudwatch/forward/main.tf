@@ -2,7 +2,7 @@
 # All infra for shipping cloudwatch logs to an http endpoint (new relic).
 # https://docs.newrelic.com/docs/logs/forward-logs/stream-logs-using-kinesis-data-firehose/
 # https://aws.amazon.com/blogs/infrastructure-and-automation/how-to-automatically-subscribe-to-amazon-cloudwatch-logs-groups/
-# 
+#
 ###
 
 # resource "random_string" "suffix" {
@@ -274,7 +274,7 @@ resource "aws_iam_role_policy" "to_kinesis" {
 # https://github.com/beta-yumatsud/terraform-practice/blob/6536a7f5edfd23f54cbe07da6e8a5317af5d6b76/log.tf
 resource "aws_cloudwatch_log_subscription_filter" "cw_subscriptions" {
   count = var.subscribe_existing ? 1 : 0
-  
+
   for_each = local.log_groups
 
   name            = join("", [reverse(split("/", each.key))[0], "-${var.name}-kinesis-filter"])
