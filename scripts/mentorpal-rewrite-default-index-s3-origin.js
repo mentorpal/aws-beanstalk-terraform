@@ -1,8 +1,8 @@
 /**
  * Rewrites origin (s3 bucket) requests to index.html for all client apps (home, chat, admin).
- * 
- * @param {*} event 
- * @returns 
+ *
+ * @param {*} event
+ * @returns
  */
  function handler(event) {
   var request = event.request;

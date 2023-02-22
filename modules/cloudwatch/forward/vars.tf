@@ -1,9 +1,9 @@
 # This module might be used before or after log groups have been created.
-# It's not possible to create a filter for a non-existing log group. 
+# It's not possible to create a filter for a non-existing log group.
 # This module supports both cases:
 # - if the groups already exist (beanstalk up and running), then set `subscribe_existing` to true
 # - if they dont exist you can use `enable_auto_subscribe`
-# You can use `enable_auto_subscribe` in both cases, it just wont subscribe any existing groups. 
+# You can use `enable_auto_subscribe` in both cases, it just wont subscribe any existing groups.
 
 variable "enable_auto_subscribe" {
   type        = bool
