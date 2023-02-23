@@ -37,6 +37,8 @@ locals {
       "*.${var.site_domain_name}"
     ]
   )
+
+  static_page_asset_aliases = [var.site_domain_name, "*.${var.site_domain_name}"] # adds support for organizations subdomains
 }
 
 ###
@@ -222,7 +224,7 @@ resource "aws_cloudfront_function" "cf_fn_origin_root" {
 module "cdn_static_assets" {
   source                             = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
   acm_certificate_arn                = data.aws_acm_certificate.cdn.arn
-  aliases                            = [var.site_domain_name]
+  aliases                            = local.static_page_asset_aliases
   allowed_methods                    = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
   block_origin_public_access_enabled = true # so only CDN can access it
   # having a default cache policy made the apply fail:
