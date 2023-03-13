@@ -10,7 +10,7 @@ variable "aws_region" {
 
 variable "aws_route53_zone_name" {
   type        = string
-  description = "name to find aws route53 zone, e.g. mentorpal.info."
+  description = "name to find aws route53 zone, e.g. mentorpal.org."
 }
 
 variable "eb_env_name" {
@@ -22,12 +22,6 @@ variable "eb_env_name" {
 variable "eb_env_namespace" {
   type        = string
   description = "Namespace, which could be your organization name, e.g. 'eg' or 'cp'"
-}
-
-variable "eb_env_stage" {
-  type        = string
-  description = "Stage, e.g. 'prod', 'staging', 'dev', or 'test'"
-  default     = "test"
 }
 
 variable "eb_env_tags" {

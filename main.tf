@@ -19,7 +19,7 @@ data "aws_acm_certificate" "cdn" {
 }
 
 locals {
-  namespace = "${var.eb_env_namespace}-${var.eb_env_stage}-${var.eb_env_name}"
+  namespace = "${var.eb_env_namespace}-${var.eb_env_name}"
 
   static_alias = (
     var.static_site_alias != ""
@@ -37,6 +37,8 @@ locals {
       "*.${var.site_domain_name}"
     ]
   )
+
+  static_page_asset_aliases = [var.site_domain_name, "*.${var.site_domain_name}"] # adds support for organizations subdomains
 }
 
 ###
@@ -46,7 +48,6 @@ locals {
 module "cdn_static" {
   source               = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn?ref=tags/0.74.0"
   namespace            = "static-${var.eb_env_namespace}"
-  stage                = var.eb_env_stage
   name                 = var.eb_env_name
   aliases              = [local.static_alias]
   cors_allowed_origins = local.static_cors_allowed_origins
@@ -61,7 +62,7 @@ module "cdn_static" {
 
 # export s3 arn so serverless can pick it up to configure iam policies
 resource "aws_ssm_parameter" "cdn_content_param" {
-  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_content_arn"
+  name        = "/${var.eb_env_name}/s3_content_arn"
   description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
   value       = module.cdn_static.s3_bucket_arn
@@ -70,7 +71,7 @@ resource "aws_ssm_parameter" "cdn_content_param" {
 
 # TODO remove
 resource "aws_ssm_parameter" "cdn_content_param_deprecated" {
-  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3_static_arn"
+  name        = "/${var.eb_env_name}/s3_static_arn"
   description = "S3 content (videos, images) bucket ARN"
   type        = "SecureString"
   value       = module.cdn_static.s3_bucket_arn
@@ -103,7 +104,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "content_bucket_version_expire_
 module "content_backup" {
   count  = var.enable_content_backup ? 1 : 0
   source = "git::https://github.com/mentorpal/terraform-modules//modules/backup?ref=tags/v1.5.1"
-  name   = "${var.eb_env_name}-s3-backup-${var.eb_env_stage}"
+  name   = "${var.eb_env_name}-s3-backup"
 
   resources = [
     module.cdn_static.s3_bucket_arn
@@ -121,7 +122,7 @@ module "content_backup" {
 #####
 module "cdn_firewall" {
   source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.0"
-  name       = "${var.eb_env_name}-cdn-${var.eb_env_stage}"
+  name       = "${var.eb_env_name}-cdn"
   scope      = "CLOUDFRONT"
   rate_limit = 1000
 
@@ -147,7 +148,7 @@ module "cdn_firewall" {
 
 module "api_firewall" {
   source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.0"
-  name       = "${var.eb_env_name}-api-${var.eb_env_stage}"
+  name       = "${var.eb_env_name}-api"
   scope      = "REGIONAL"
   rate_limit = 1000
 
@@ -165,7 +166,7 @@ module "api_firewall" {
 }
 
 resource "aws_ssm_parameter" "api_firewall_ssm" {
-  name  = "/${var.eb_env_name}/${var.eb_env_stage}/api_firewall_arn"
+  name  = "/${var.eb_env_name}/api_firewall_arn"
   type  = "String"
   value = module.api_firewall.wafv2_webacl_arn
   tags  = var.eb_env_tags
@@ -223,7 +224,7 @@ resource "aws_cloudfront_function" "cf_fn_origin_root" {
 module "cdn_static_assets" {
   source                             = "git::https://github.com/cloudposse/terraform-aws-cloudfront-s3-cdn.git?ref=tags/0.82.4"
   acm_certificate_arn                = data.aws_acm_certificate.cdn.arn
-  aliases                            = [var.site_domain_name]
+  aliases                            = local.static_page_asset_aliases
   allowed_methods                    = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
   block_origin_public_access_enabled = true # so only CDN can access it
   # having a default cache policy made the apply fail:
@@ -286,7 +287,6 @@ module "cdn_static_assets" {
   parent_zone_name     = var.aws_route53_zone_name
   # https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PriceClass.html
   price_class = "PriceClass_100"
-  stage       = var.eb_env_stage
   # this are artifacts generated from github code, no need to version them:
   versioning_enabled     = true # test backup
   viewer_protocol_policy = "redirect-to-https"
@@ -297,7 +297,7 @@ module "cdn_static_assets" {
 
 # cicd pipeline runs in us-east-1 so its easier to have them too in the same region
 resource "aws_ssm_parameter" "cdn_id" {
-  name     = "/${var.eb_env_name}/${var.eb_env_stage}/CLOUDFRONT_DISTRIBUTION_ID"
+  name     = "/${var.eb_env_name}/CLOUDFRONT_DISTRIBUTION_ID"
   type     = "String"
   value    = module.cdn_static_assets.cf_id
   provider = aws.us-east-1
@@ -305,7 +305,7 @@ resource "aws_ssm_parameter" "cdn_id" {
 }
 
 resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
-  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3-websites/ARN"
+  name        = "/${var.eb_env_name}/s3-websites/ARN"
   description = "Bucket that stores frontend apps"
   type        = "String"
   value       = module.cdn_static_assets.s3_bucket_arn
@@ -314,7 +314,7 @@ resource "aws_ssm_parameter" "cdn_s3_websites_arn" {
 }
 
 resource "aws_ssm_parameter" "cdn_s3_websites_name" {
-  name        = "/${var.eb_env_name}/${var.eb_env_stage}/s3-websites/NAME"
+  name        = "/${var.eb_env_name}/s3-websites/NAME"
   description = "Bucket that stores frontend apps"
   type        = "String"
   value       = module.cdn_static_assets.s3_bucket

@@ -7,9 +7,9 @@ module "notify_slack" {
   source  = "terraform-aws-modules/notify-slack/aws"
   version = "~> 4.0"
 
-  sns_topic_name = "slack-alerts-${var.eb_env_stage}-${var.eb_env_namespace}"
+  sns_topic_name = "slack-alerts-${var.eb_env_namespace}"
 
-  lambda_function_name = "notify-slack-${var.eb_env_stage}-${var.eb_env_namespace}"
+  lambda_function_name = "notify-slack-${var.eb_env_namespace}"
 
   slack_webhook_url = var.cloudwatch_slack_webhook
   slack_channel     = var.alerts_slack_channel
@@ -17,7 +17,7 @@ module "notify_slack" {
 }
 
 resource "aws_ssm_parameter" "sns_alert_topic_arn" {
-  name        = "/${var.eb_env_name}/${var.eb_env_stage}/shared/sns_alert_topic_arn"
+  name        = "/${var.eb_env_name}/shared/sns_alert_topic_arn"
   description = "Slack alert topic"
   type        = "String"
   value       = module.notify_slack.this_slack_topic_arn

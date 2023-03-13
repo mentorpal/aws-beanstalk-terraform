@@ -8,7 +8,7 @@ remote_state {
     # name for an s3 bucket that will store terraform state
     # e.g. MY_APP_NAME-s3-state
     # terragrunt will create this for us
-    bucket          = "mentorpal-info-s3-state"
+    bucket          = "qamentorpal-s3-state"
 
     # probably can leave this as is
     key             = "mentorpal/terraform.tfstate"
@@ -23,6 +23,6 @@ remote_state {
     # name of the AWS dynamodb table used for locking state
     # e.g. MY_APP_NAME-s3-state-locks
     # terragrunt will create this for us
-    dynamodb_table  = "mentorpal-info-s3-state-locks"
+    dynamodb_table  = "mentorpal-s3-state-locks"
   }
 }
