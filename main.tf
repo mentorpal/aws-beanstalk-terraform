@@ -136,8 +136,7 @@ module "cdn_firewall" {
   disable_bot_protection_for_amazon_ips = false
   excluded_bot_rules = [
     "CategorySocialMedia", # slack
-    "CategorySearchEngine", # google bot
-    "CategoryHttpLibrary"
+    "CategorySearchEngine" # google bot
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
@@ -159,6 +158,7 @@ module "api_firewall" {
 
   excluded_bot_rules = [
     "CategoryMonitoring",
+    "CategoryHttpLibrary"
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
