@@ -154,6 +154,7 @@ module "api_firewall" {
   secret_header_name = var.secret_header_name
   secret_header_value = var.secret_header_value
   allowed_origin = var.allowed_origin
+  enable_ip_and_origin_whitelisting = true
 
   excluded_bot_rules = [
     "CategoryMonitoring",
