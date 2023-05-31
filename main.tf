@@ -155,7 +155,6 @@ module "api_firewall" {
   secret_header_value = var.secret_header_value
   allowed_origin = var.allowed_origin
 
-  disable_bot_protection_for_amazon_ips = true
   excluded_bot_rules = [
     "CategoryMonitoring",
   ]
