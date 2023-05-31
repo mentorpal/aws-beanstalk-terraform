@@ -147,7 +147,7 @@ module "cdn_firewall" {
 }
 
 module "api_firewall" {
-  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.16"
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/1.6.16"
   name       = "${var.eb_env_name}-api"
   scope      = "REGIONAL"
   rate_limit = 1000
@@ -157,8 +157,7 @@ module "api_firewall" {
   enable_ip_and_origin_whitelisting = true
 
   excluded_bot_rules = [
-    "CategoryMonitoring",
-    "CategoryHttpLibrary"
+    "CategoryMonitoring"
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
