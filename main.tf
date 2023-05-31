@@ -34,7 +34,10 @@ locals {
     ? var.static_cors_allowed_origins
     : [
       var.site_domain_name,
-      "*.${var.site_domain_name}"
+      "*.${var.site_domain_name}",
+      "https://${var.site_domain_name}",
+      "https://*.${var.site_domain_name}",
+      "https://static.${var.site_domain_name}",
     ]
   )
 
@@ -136,7 +139,7 @@ module "cdn_firewall" {
   disable_bot_protection_for_amazon_ips = false
   excluded_bot_rules = [
     "CategorySocialMedia", # slack
-    "CategorySearchEngine" # google bot    
+    "CategorySearchEngine" # google bot
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
@@ -147,14 +150,17 @@ module "cdn_firewall" {
 }
 
 module "api_firewall" {
-  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.0"
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/1.6.16"
   name       = "${var.eb_env_name}-api"
   scope      = "REGIONAL"
   rate_limit = 1000
+  secret_header_name = var.secret_header_name
+  secret_header_value = var.secret_header_value
+  allowed_origin = var.allowed_origin
+  enable_ip_and_origin_whitelisting = true
 
-  disable_bot_protection_for_amazon_ips = true
   excluded_bot_rules = [
-    "CategoryMonitoring",
+    "CategoryMonitoring"
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough

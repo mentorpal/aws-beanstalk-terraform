@@ -77,3 +77,18 @@ variable "alert_topic_arn" {
   description = "sns topic arn used for alerts"
   default     = ""
 }
+
+variable "secret_header_name" {
+  type        = string
+  default     = ""
+}
+
+variable "secret_header_value" {
+  type        = string
+  default     = ""
+}
+
+variable "allowed_origin" {
+  type        = string
+  default     = ""
+}
