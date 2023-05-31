@@ -34,7 +34,10 @@ locals {
     ? var.static_cors_allowed_origins
     : [
       var.site_domain_name,
-      "*.${var.site_domain_name}"
+      "*.${var.site_domain_name}",
+      "https://${var.site_domain_name}",
+      "https://*.${var.site_domain_name}",
+      "https://static.${var.site_domain_name}",
     ]
   )
 
