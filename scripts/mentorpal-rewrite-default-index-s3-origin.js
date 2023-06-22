@@ -13,12 +13,25 @@
   }
 
   if (uri == "" || uri == "/") {
+    var finalLocation = "/home/"
+    try{
+        //   uri may not have the url
+        var queryParams = request.querystring || "{}"
+        var queryKeys = Object.keys(queryParams)
+        var urlParams = queryKeys.map((key)=>`${key}=${queryParams[key]["value"]}`)
+        if (urlParams.length > 0){
+            finalLocation = `/home/?${urlParams.join("&")}`
+        }
+    }catch(e){
+        console.log("failed to parse and set query params")
+    }
+
     var response = {
       statusCode: 302,
       statusDescription: "Found",
-      headers: { location: { value: "/home/" } },
+      headers: { location: { value: finalLocation } },
     };
-
+    
     return response;
   }
 
