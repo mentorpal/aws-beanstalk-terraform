@@ -92,3 +92,9 @@ variable "allowed_origin" {
   type        = string
   default     = ""
 }
+
+variable "not_found_error_response_path" {
+  type        = string
+  default     = ""
+  description = "path to redirect to for 404 errors"
+}
