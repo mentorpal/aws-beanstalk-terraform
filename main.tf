@@ -247,6 +247,15 @@ module "cdn_static_assets" {
   # cookies are used in graphql right? but seems to work with "none":
   forward_cookies = "none"
 
+  custom_error_response = var.not_found_error_response_path != "" ? [
+    {
+      error_caching_min_ttl = 10
+      error_code = 404
+      response_code = 200
+      response_page_path = var.not_found_error_response_path
+    },
+  ] : []
+
   # from the docs: "Amazon S3 returns this index document when requests are made to the root domain or any of the subfolders"
   # if this is the case then aws_lambda_function.cf_fn_origin_root is not required
   index_document      = "index.html"
