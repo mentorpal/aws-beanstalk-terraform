@@ -88,9 +88,9 @@ variable "secret_header_value" {
   default     = ""
 }
 
-variable "allowed_origin" {
-  type        = string
-  default     = ""
+variable "allowed_origins" {
+  type        = list(string)
+  default     = []
 }
 
 variable "not_found_error_response_path" {
