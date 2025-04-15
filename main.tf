@@ -150,13 +150,13 @@ module "cdn_firewall" {
 }
 
 module "api_firewall" {
-  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/1.6.16"
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/1.6.17"
   name       = "${var.eb_env_name}-api"
   scope      = "REGIONAL"
   rate_limit = 1000
   secret_header_name = var.secret_header_name
   secret_header_value = var.secret_header_value
-  allowed_origin = var.allowed_origin
+  allowed_origins = var.allowed_origins
   enable_ip_and_origin_whitelisting = true
 
   excluded_bot_rules = [
