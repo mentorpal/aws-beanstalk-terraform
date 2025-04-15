@@ -150,7 +150,7 @@ module "cdn_firewall" {
 }
 
 module "api_firewall" {
-  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/1.6.17"
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/1.6.18"
   name       = "${var.eb_env_name}-api"
   scope      = "REGIONAL"
   rate_limit = 1000
