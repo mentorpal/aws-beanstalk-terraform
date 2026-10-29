@@ -136,7 +136,6 @@ module "cdn_firewall" {
     aws = aws.us-east-1
   }
 
-  disable_bot_protection_for_amazon_ips = false
   excluded_bot_rules = [
     "CategorySocialMedia", # slack
     "CategorySearchEngine" # google bot
@@ -147,6 +146,10 @@ module "cdn_firewall" {
   ]
   enable_logging = var.enable_cdn_firewall_logging
   tags           = var.eb_env_tags
+
+  allowed_origins = var.allowed_origins
+  secret_header_name = var.secret_header_name
+  secret_header_value = var.secret_header_value
 }
 
 module "api_firewall" {
