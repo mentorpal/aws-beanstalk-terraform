@@ -124,7 +124,7 @@ module "content_backup" {
 # 
 #####
 module "cdn_firewall" {
-  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.0"
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.21"
   name       = "${var.eb_env_name}-cdn"
   scope      = "CLOUDFRONT"
   rate_limit = 1000
