@@ -124,11 +124,12 @@ module "content_backup" {
 # 
 #####
 module "cdn_firewall" {
-  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.0"
+  source     = "git::https://github.com/mentorpal/terraform-modules//modules/api-waf?ref=tags/v1.6.22"
   name       = "${var.eb_env_name}-cdn"
   scope      = "CLOUDFRONT"
   rate_limit = 1000
 
+  max_query_size = var.max_query_size
 
   # cloudfront waf must be in N.Virginia
   aws_region = "us-east-1"
@@ -136,17 +137,21 @@ module "cdn_firewall" {
     aws = aws.us-east-1
   }
 
-  disable_bot_protection_for_amazon_ips = false
   excluded_bot_rules = [
     "CategorySocialMedia", # slack
     "CategorySearchEngine" # google bot
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
-    "CrossSiteScripting_BODY" # flags legit image upload attempts
+    "CrossSiteScripting_BODY", # flags legit image upload attempts
+    "SizeRestrictions_QUERYSTRING" # 2kb is not enough, max_query_size allows us to set a larger value
   ]
   enable_logging = var.enable_cdn_firewall_logging
   tags           = var.eb_env_tags
+
+  allowed_origins = var.allowed_origins
+  secret_header_name = var.secret_header_name
+  secret_header_value = var.secret_header_value
 }
 
 module "api_firewall" {
