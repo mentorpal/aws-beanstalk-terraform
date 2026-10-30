@@ -129,6 +129,7 @@ module "cdn_firewall" {
   scope      = "CLOUDFRONT"
   rate_limit = 1000
 
+  max_query_size = var.max_query_size
 
   # cloudfront waf must be in N.Virginia
   aws_region = "us-east-1"
@@ -142,7 +143,8 @@ module "cdn_firewall" {
   ]
   excluded_common_rules = [
     "SizeRestrictions_BODY",  # 8kb is not enough
-    "CrossSiteScripting_BODY" # flags legit image upload attempts
+    "CrossSiteScripting_BODY", # flags legit image upload attempts
+    "SizeRestrictions_QUERYSTRING" # 2kb is not enough, max_query_size allows us to set a larger value
   ]
   enable_logging = var.enable_cdn_firewall_logging
   tags           = var.eb_env_tags
