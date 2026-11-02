@@ -93,6 +93,12 @@ variable "allowed_origins" {
   default     = []
 }
 
+variable "max_query_size" {
+  type        = number
+  default     = 4096
+  description = "max query size for cloudfront waf"
+}
+
 variable "not_found_error_response_path" {
   type        = string
   default     = ""
